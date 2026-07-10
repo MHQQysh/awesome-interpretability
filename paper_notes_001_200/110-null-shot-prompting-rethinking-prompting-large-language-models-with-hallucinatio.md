@@ -1,64 +1,56 @@
 # 110. Null-Shot Prompting: Rethinking Prompting Large Language Models With Hallucination
 
-> 逐篇阅读记录：第 110 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：EMNLP 2024。本文反直觉地把 hallucination 写进 prompt，测试它是否能激发创造性、任务性能和 hallucination detection。
 
 ## 0. 论文信息
 
-- **作者**：Pittawat Taveekitworachai, Febri Abdullah, Ruck Thawonmas
-- **发表 venue / date**：EMNLP / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.emnlp-main.740)
-- **领域标签**：Evaluation, Reasoning, Hallucination, Behavior, Detect
-- **本地 PDF 文本规模**：约 24,334 个词
+- **作者**：Pittawat Taveekitworachai 等
+- **来源**：[EMNLP 2024](https://aclanthology.org/2024.emnlp-main.740)
+- **方法**：Null-shot prompting
+- **模型/任务**：PaLM 2、Gemini 1.0 Pro、GPT-3.5/4 Turbo、Claude 3 Opus；commonsense、reading comprehension、NLI、TriviaQA、MATH、HaluEval
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决大模型幻觉或事实性错误难以定位、解释和诊断的问题。。方法上以Evaluation为主线，结合论文摘要中的核心设定：This paper investigates an interesting phenomenon where we observe performance increases in large language models (LLMs) when providing a prompt that causes and exploits hallucination.We propose null-shot prompting, a co
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+通常 prompt engineering 把 hallucination 视为要消除的坏行为，但作者观察到，在某些创造性、数学或 NLI 任务中，提示模型“look and utilize hallucination”反而可能改变它的搜索和组合策略。论文因此不主张 hallucination 总是有益，而是研究这种 prompt 是否能作为可控的 performance/behavior intervention。
 
-## 2. Introduction 讲解
+关键问题有三层：null-shot 相对 zero-shot 是否提升任务分数？它是否也提高 hallucination detection？加入 reasoning/CoT 后，hallucination phrase 的效果是否仍然存在？
 
-- **引言结构**：3 Evaluation of Null-Shot Prompting；5 Hallucination Detection tion improves the hallucination detection abilities；361. Proceedings of the 2017 Conference on Empirical；2023. Jailbroken: How Does LLM Safety Train- Yulong Chen, Longyue Wang, Anh Tuan Luu, Wei；3 Sonnet, or Claude 3 Opus from our main experi-；3 Models
-- **引言关键线索**：research groups have proposed that hallucination Hallucination of generative models, in a broad may be regarded as a way for LLMs to be creative sense, is defined as a situation where there is con- (Huang et al., 2023; Rawte et al., 2023b; Jiang et al., flicting information, either with facts, established 2024). Given that hallucination may be inevitable knowledge, intents, or previously generated or pro- and is an innate property of LL Ms, instead of fo- vided content, within their context window (Ji et al., cusing solely on mitigating hallucination, which 2023; Zhang et al., 2023; Huang et al., 2023; Rawte is still crucial, an alternative approach is to take et al., 2023b). Hallucination existed even before the advantage of this property instead. recent widespread usage of large language models This perspective must hold some value, as in a (LLMs) (Ji et al., 2023). However, it has bec
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+Null-shot prompt 在任务说明中显式承认/利用 hallucination，例如要求模型寻找、使用或从“imaginary section”中利用 hallucinated information。作者拆分 phrase 位置和组件：look、utilize、hallucination 等，并与 zero-shot、zero-shot CoT 和无 hallucination 的 reasoning prompt 对比。
 
-- **方法段落线索**：independent clauses are joined by the conjunction "but." The sentence "All the clutter in the house excited Leslie but not Derrick because cleaning energized Leslie very much" is an example of a complex sentence with an independent ately instruct LLMs to reference a null, non- The first independent clause tells us that Leslie was excited by the clutter in the house. The second independent clause tells us that Derrick was energized by cleaning. The two clause and a dependent clause. The independent clause is "All the clutter in the house excited Leslie." The dependent clause is "because cleaning energized Leslie very much." existent, section. We evaluate null-shot prompt- clauses are related because they both describe how the characters in the story feel about clutter. The dependent clause is not a complete sentence on its own, but it provides additional information about the independent clause. In this case, the dependent clause ing acr
-- **方法与解释性关系**：该论文主要围绕 `Evaluation, Reasoning, Hallucination, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+实验跨多个模型和 benchmark，报告相对 zero-shot 的变化并做统计显著性测试；部分结果也比较 text/chat generation 模型以及不同模型训练阶段。
 
-## 4. Baseline 与对比讲解
+## 3. Baseline / 对比基线
 
-- **检测到的 baseline / comparison 关键词**：Table 1. We note, For cases where null-shot, Henceforth, MATH dataset, Num, On the other hand, We compare placing the, For the, Turbo model. We compare
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - zero-shot prompting baseline in Table 1. We note
-  - changes. For cases where null-shot prompting or its reasoning variant show improvement over the baseline, 鈭 , 鈭椻垪 ,
-  - to the zero-shot prompting baseline. Henceforth, for all the tables presenting results from the MATH dataset, Num.
-  - formance baseline compared to the previous sec- the original prompts from the evaluation set to suit
-  - null-shot prompting is effective with chat-tuned compared to a strong 0CoT prompting baseline.
-  - ever, we change the baseline to zero-shot chain-of- effect sizes. On the other hand, there are 40 im-
+- **Zero-shot**：无额外 hallucination phrase。
+- **Zero-shot CoT**：要求逐步推理，作为已知的 hallucination mitigation/accuracy baseline。
+- **Null-shot + CoT**：同时加入 reasoning 与 hallucination。
+- **Phrase ablation**：只用 look、只用 utilize、不同位置。
+- **多模型/任务**：识别效果依赖模型家族和任务类型，而不是把一个模型当普适结论。
 
-## 5. Experiments 与 Findings 讲解
+## 4. Experiments / Findings：结果如何读
 
-- **可检测的数值信号**：11.28%, 10.95%, 10.1%, 1.85%, 3.64%, 7.01%, 6.97%, 38.46%, 28.97%, 1.93%, 2.13%, 44.62%
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - and find several cases of performance improve-
-  - of 34 combinations that show improvements from
-  - We propose a null-shot phrase for null-shot prompt- null-shot prompting, 20 are statistically significant,
-  - placing it at the end of the prompt, as demonstrated improve the performance of PaLM 2, both text and
-  - in Section 7.1. The original optimized prompt for chat generation. We observe great improvement in
-  - improvement in reading comprehension. However, On the other hand, we observe that null-shot
-  - chances of hallucination through improved recall previously discussed.
+Null-shot 对 reading comprehension、NLI 和部分 arithmetic/MATH 任务有明显提升；论文报告某些模型最高相对 baseline 增幅约 44.62%。PaLM 2 Chat 在 MATH 某些主题如 algebra 获得较大收益，GPT-4 Turbo 在 RACE-m/RACE-h reading comprehension 达到很强结果。
 
-## 6. Conclusion、局限与可复现性
+但收益不是普遍的：commonsense reasoning 和 closed-book TriviaQA 经常无提升甚至变化不大，后者需要从参数记忆中准确 recall，而 hallucination phrase 可能鼓励非事实扩展。Claude 3/GPT-4 等更强模型多数任务收益变小，仅 reading comprehension 仍明显，说明模型训练阶段和已有 instruction 对 prompt 的敏感性很重要。
 
-- **结论段落线索**：hallucination in prompts may not only affect Recent research has suggested that hallucination is LLMs but, in certain cases, enhance their per- instead a feature of LLMs (Bai et al., 2024) and is formance. to be expected from calibrated LLMs (Kalai and
-- **局限/未来工作线索**：acknowledge the limitation of our current approach & probability, which shows performance increase；coupled with the model. Therefore, future work necessary. Additionally, we observe moderate per-；could not do due to limitations of our computa- where we observe the improvement more from in-；Limitations for LLMs is an active area of research and there
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+在 HaluEval 上，null-shot 有时反而提升 hallucination detection performance，这是反直觉结果：提示中承认 hallucination 不必然让模型更愿意生成错误，也可能让它更主动检查/区分幻觉。作者同时发现结果依赖原始 zero-shot baseline，低基线模型的相对提升不能直接比较。
 
-## 7. 一句话定位
+## 5. Ablation / 机制解释
 
-这篇论文把“Null-Shot Prompting: Rethinking Prompting Large Language Models With Hallucination”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+- phrase 位置：通常放在 prompt 开头/任务指令附近最有效，位置变化会明显改变结果。
+- phrase 组件：完整 phrase 同时包含 look 与 utilize 时往往最好，删掉组件会下降。
+- null-shot vs null-shot+CoT：CoT 并不总是叠加收益；某些 MATH 任务 CoT 没有提升。
+- chat/text 模型：chat tuning 更可能接受创造性 hallucination 指令，但不同模型差异很大。
+
+## 6. Limitations / 局限与复现注意
+
+- 结果高度依赖 proprietary model、prompt wording、任务和相对 baseline，不能当作通用 hallucination mitigation。
+- “hallucination”在创造性任务中可能是有意的非事实生成，和安全意义的 factual hallucination 不同。
+- 绝大多数实验是 prompt-level observation，没有内部机制或因果 intervention 解释为什么有效。
+- 某些收益可能来自提高探索性/接受非标准答案，而不是可靠性提升。
+
+## 7. 两句话总结
+
+Null-shot prompting 反直觉地在 prompt 中显式提到并利用 hallucination，在 reading comprehension、NLI 和部分数学任务上可显著提升性能，最高报告约 44.62% 的相对增益。它也可能提升 hallucination detection，但对 commonsense、closed-book QA 和强模型不稳定，说明“创造性 hallucination”与“事实性幻觉”必须分开评估。

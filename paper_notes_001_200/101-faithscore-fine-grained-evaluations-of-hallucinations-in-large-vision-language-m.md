@@ -1,64 +1,58 @@
-# 101. FaithScore: Fine-grained Evaluations of Hallucinations in Large Vision-Language Models
+# 101. FAITHSCORE: Fine-grained Evaluations of Hallucinations in Large Vision-Language Models
 
-> 逐篇阅读记录：第 101 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：Findings of EMNLP 2024。重点是把自由形式 LVLM 答案拆成可验证的 atomic image facts，而不是只数对象是否出现。
 
 ## 0. 论文信息
 
 - **作者**：Liqiang Jing, Ruosen Li, Yunmo Chen, Xinya Du
-- **发表 venue / date**：EMNLP / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.findings-emnlp.290)
-- **领域标签**：Rationale, Evaluation, MLLM, Hallucination, Behavior, Detect
-- **本地 PDF 文本规模**：约 11,416 个词
+- **来源**：[Findings of EMNLP 2024](https://aclanthology.org/2024.findings-emnlp.290)
+- **代码**：[FAITHSCORE](https://github.com/bcdnlp/FAITHSCORE)
+- **数据/模型**：LLaVA-1k、MSCOCO-Cap；LLaVA、MiniGPT-4 等 LVLM
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决大模型幻觉或事实性错误难以定位、解释和诊断的问题。。方法上以Rationale为主线，结合论文摘要中的核心设定：We introduce FAITHSCORE (Faithfulness to Atomic Image Facts Score), a reference-free and fine-grained evaluation metric that measures the faithfulness of the generated free-form answers from large vision-language models
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+LVLM 的自由形式回答可能同时包含客观图像描述和主观分析；现有 CHAIR、POPE、NOPE 等方法多关注对象是否存在，无法细粒度处理颜色、数量、空间关系和动作，也不适合开放式 VQA/对话答案。若把“合理分析”误判为 hallucination，或忽略一句话中的一个错误事实，分数都会失真。
 
-## 2. Introduction 讲解
+FAITHSCORE 的目标是 reference-free、fine-grained 地衡量“答案是否忠实于图像”，并让每一个被判为错误的 atomic fact 都可解释地定位到答案片段。
 
-- **引言结构**：2 Related Work like METEOR (Banerjee and Lavie, 2005) and；300 LLaVA-1k；50 MiniGPT-4；0 InstructBLIP；2023. Instructblip: Towards general-purpose vision-；2023. Longeval: Guidelines for human evaluation of；1. Large spherical objects painted with vibrant and
-- **引言关键线索**：contents denote hallucinations in the answers. FAITH - Large Language Models (LLMs), such as GPT- S CORE allows a more fine-grained and interpretable 3 (Brown, 2020) and ChatGPT (OpenAI, 2022), evaluation of the factual precision of free-form answers. have demonstrated various language modeling ca- pabilities. Despite their achievements, they still et al., 2021). LVLMs have shown strong perfor- lack the capacity to handle multimodal inputs ef- mance on various multimodal tasks, such as Visual fectively. As a result, a significant amount of re- Question Answering (Antol et al., 2015), Image search has shifted its focus towards Large Vision- Captioning (Lin et al., 2014), and Multimodal Con- Language Models (LVLMs) (Liu et al., 2023e; versation (Liu et al., 2023e). Ye et al., 2023; Sun et al., 2023) by incorporat- Despite the effectiveness of LVLMs, the problem ing powerful LLMs (Touvron e
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+1. **Descriptive sub-sentence identification**：用 LLM 找出需要图像核验的客观描述句，排除纯主观/常识分析。
+2. **Atomic fact generation**：把句子拆成对象、属性、数量、动作和关系等最小 facts。
+3. **Visual entailment verification**：用视觉 entailment model 判断每个 atomic fact 是否被输入图像支持。
 
-- **方法段落线索**：potential hazards that could result in significant offer a constricted view on evaluating hallucina- consequences such as misinformation and safety tions, primarily concentrating on coarse-grained concerns, thus degrading the model鈥檚 reliability in object existences (Rohrbach et al., 2018; Lovenia practical applications inevitably (MacLeod et al., et al., 2023), while neglecting other fine-grained 2017). Hence, it is imperative that these issues elements, such as counts, colors, and the interre- are thoroughly measured and addressed (Ji et al., lations between objects (e.g., the spatial relation 2023). between the person and the car in Figure 1), which Nevertheless, there have been limited explo- also form a significant portion of visual hallucina- rations that measure the hallucination problem in tions (Gunjal et al., 2023). Consequently, devising LVLMs. Li et al. (2023c) was among the first a method to holistically evaluate fine-grain
-- **方法与解释性关系**：该论文主要围绕 `Rationale, Evaluation, MLLM, Hallucination, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+FaithScore 是被验证 facts 的比例，因此一句话“man is standing on the back of a car”与图像不一致时只惩罚这个关系，而不是把整段回答二元判错。
 
-## 4. Baseline 与对比讲解
+## 3. Baseline / 对比基线
 
-- **检测到的 baseline / comparison 关键词**：Fact Verification. In this, Table 1, Comparison of recognizer LLMs, Table 2, Comparison of the Verifier, LLMs accuracy on and, LVLMs, LLaVA and In-, FAITH S CORE, FAITH - swer length, Lee, Improved baselines with visual, Compared with FAITH S, CORE, CHAIR achieves, Table 7. Traditional metrics
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - Fact Verification. In this stage, we compare the
-  - Table 1: Comparison of recognizer LLMs鈥 accuracy (%)
-  - Table 2: Comparison of the Verifier LLMs accuracy on and human judgment on LVLMs (i.e., LLaVA and In-
-  - individual atomic fact derived from the descrip- nificant test between our result and the baseline result is
-  - sentence itself is included, there is an improvement FAITH S CORE, we compare it with several multi-
-  - comparison of various models in terms of FAITH - swer length on hallucinations, we analyze answer
+- **CHAIR**：对象 hallucination 的 sentence/instance 指标。
+- **POPE/NOPE**：通过 object probing 或负对象问题检查不存在对象。
+- **CLIPScore、BLEU/ROUGE/METEOR**：相似度/重叠指标，不直接核验事实。
+- **人工 Likert 评分**：作为 faithfulness gold，测试自动指标与人类判断的相关性。
+- **不同 recognizer/verifier LLM 与 VEM**：消融子句识别器、事实生成器和 visual entailment model 的选择。
 
-## 5. Experiments 与 Findings 讲解
+## 4. Experiments / Findings：结果如何读
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - which leaves room for future improvements.
-  - fectively. As a result, a significant amount of re- Question Answering (Antol et al., 2015), Image
-  - potential hazards that could result in significant offer a constricted view on evaluating hallucina-
-  - Nevertheless, there have been limited explo- also form a significant portion of visual hallucina-
-  - ing, answering open-domain questions in a free- image, which leaves a large room for improvement.
-  - short sentences that are split by punctuation in the the spatial relation. In Figure 1, we show some
-  - 鈥測es鈥. Conversely, if the element is in alignment tors. To improve reliability, we only keep these
+在人类标注的 LVLM hallucination 上，FAITHSCORE 与人类判断的相关性最高或接近最高，优于单纯文本重叠和粗粒度对象指标。附录相关性表显示，BLEU/ROUGE/METEOR 对 hallucination 的相关性弱，CHAIR 只看对象时会漏掉关系/属性错误；FaithScore 的 atomic verification 更贴近人类判断。
 
-## 6. Conclusion、局限与可复现性
+在 LLaVA-1k 和 MSCOCO-Cap 上，LLaVA、LLaVA-1.5、InstructBLIP、MiniGPT-4 等模型都暴露出明显视觉 hallucination。captioning 相对短、事实少时更忠实；开放式复杂问题和更长回答更容易引入额外属性、空间关系和分析性错误。
 
-- **结论段落线索**：content than the other task for most LVLMs. This We introduce a novel metric called FAITH S CORE may be attributed to the fact that captioning sen- for evaluating free-form and open-domain answers tences mainly are brief descriptions and shorter. generated by large vision-language models. Com- The Influence of Multiple Objects. Figure 4 pared to previous metrics, FAITH S CORE offers a shows how the number of objects in the answer finer level of granularity, interpretability, and closer generated by different models affects the FAITH - alignment with human judgments. Our quantita- S CORET虈he model鈥檚 faithfulness varies with the tive analysis demonstrates that current LVLMs are number of objects. While all models start with rel- prone to visual hallucination problems. We also atively high scores when there are few objects in find that the answer length and number of objects the answer, their performance generally drop as the could affect the faithfulness of LVLMs. In addition, number of 
-- **局限/未来工作线索**：Limitations Mark S. Krass, Ranjay Krishna, Rohith Kuditipudi,；for future work. Meng Huat Tiong, Junqi Zhao, Weisheng Wang,
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+闭源 GPT-4V/Gemini 的 FAITHSCORE 通常优于开源模型，但并非没有 hallucination。论文用句子级分数和答案长度分析说明，不能只报告整体均值：生成更长的答案会覆盖更多事实，同时也增大出错机会。
 
-## 7. 一句话定位
+## 5. Ablation / 机制解释
 
-这篇论文把“FaithScore: Fine-grained Evaluations of Hallucinations in Large Vision-Language Models”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+- 只核验 object existence vs 解析 attributes/relations：后者与人类判断相关性更高。
+- 不同 descriptive sentence recognizer：ChatGPT 通常优于较小 LLaMA recognizer。
+- 不同 visual entailment model：VEM 的质量直接决定 atomic fact 标签。
+- answer-level vs sentence-level score：sentence-level 能定位错误来源，适合诊断模型。
+
+## 6. Limitations / 局限与复现注意
+
+- 依赖 LLM 进行句子识别和 atomic fact generation，前置解析错误会传递到最终分数。
+- VEM 仍可能无法判断复杂常识、隐含关系和主观分析，reference-free 不等于无偏。
+- 人类 gold 规模有限，跨语言、视频和多轮视觉对话还需额外验证。
+- FaithScore 是事实忠实性指标，不评价答案有用性、推理质量或安全性。
+
+## 7. 两句话总结
+
+FAITHSCORE 解决 LVLM 自由回答中细粒度视觉 hallucination 无法被 CHAIR/POPE 等粗粒度指标覆盖的问题。它把回答拆成描述句和 atomic image facts，再用视觉蕴含验证，结果比文本相似度和对象级指标更贴近人类判断，但解析器和 VEM 的误差仍会影响最终分数。

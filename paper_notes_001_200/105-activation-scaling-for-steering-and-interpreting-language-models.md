@@ -1,60 +1,57 @@
 # 105. Activation Scaling for Steering and Interpreting Language Models
 
-> 逐篇阅读记录：第 105 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：Findings of EMNLP 2024。重点是用每个模型位置一个 scalar 替代高维 steering vector，并把 steering 位置变成可解释地图。
 
 ## 0. 论文信息
 
-- **作者**：Niklas Stoehr, Kevin Du, Vésteinn Snæbjarnarson, Robert West, Ryan Cotterell, Aaron Schein
-- **发表 venue / date**：EMNLP / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.findings-emnlp.479)
-- **领域标签**：Attribution, Rationale, Steering, Hidden, LLM, Activation, Control
-- **本地 PDF 文本规模**：约 8,463 个词
+- **作者**：Niklas Stoehr, Kevin Du, Vésteinn Snæbjarnarson 等
+- **来源**：[Findings of EMNLP 2024](https://aclanthology.org/2024.findings-emnlp.479)
+- **方法**：ACTIVSCALAR、dynamic activation scalars
+- **任务**：concept steering、counterfactual/knowledge conflict 等小型 mechanistic datasets
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型的知识、能力或行为信号分散在内部表征中，研究需要定位承载信号的神经元、特征、层或电路。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Attribution为主线，结合论文摘要中的核心设定：Given the prompt "Rome is in", can we steer a language model to flip its prediction of an incorrect token "France" to a correct token "Italy" by only multiplying a few relevant activation vectors with scalars?We argue th
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+常见 steering vector 在很多 layer/token/head 上加入高维向量，能改变模型行为却难以知道哪个组件真正负责；参数多，也容易把 steering direction 与 activation magnitude 混在一起。作者提出只学习一个 scalar，乘在已有 activation vector 上：方向不变，只改变该位置计算的强弱。
 
-## 2. Introduction 讲解
+这样既可以用少量参数控制模型朝向目标概念，又能把 learned scalar 直接画成 layer/token/head 的 intervention map，回答“模型在哪里已经有相关方向、哪些位置需要增强或抑制”。
 
-- **引言结构**：1 Introduction；4 Experiments ful according to our effectiveness objective illustrated；5 Extension to Variable-Length Prompts；10 Figure 8: We compare ACTIV S CALAR on GPT2-Small；7 Conclusion studied and the small size and synthetic character；2024. Inspecting and editing knowledge represen-；2024. Competition of mechanisms: Tracing how
-- **引言关键线索**：as interventions to other model locations may Understanding which components of a language be similarly effective. Indeed, recent work has model play which roles in which tasks is a core aim questioned the relationship between interpretability of mechanistic interpretability. Given the prompt and intervention on this basis, and has advocated Rome is in, for instance, one might ask which com- for more rigorous and deliberate methodology for ponents of the model most influence it to favor Italy connecting the two (Hase et al., 2023; Wang and over some incorrect answer token, such as France. Veitch, 2024; Hanna et al., 2024). In addressing this question, a natural axiom is that A parallel literature on model steerability also a given component can only be understood as influ- seeks to develop effective interventions, not for ential for a given task if intervening on it meaning- the primary 
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+给每个候选 activation location 一个可学习系数 beta，干预形式是 beta × activation；beta=0 表示不干预，正/负或大/小值表示增强/抑制原有计算。训练目标直接优化 steering effectiveness，例如把 Italy steering 到 France 或处理 conflict dataset。
 
-- **方法段落线索**：much more minimal allowing us to pinpoint in- 2019; Vig et al., 2020; Meng et al., 2022), among terpretable model components. We evaluate ac- others. Studies in this literature often produce a tivation scaling from different angles, compare set of attribution scores associated with various performance on different datasets, and make locations in the model which represent how much activation scalars a learnable function of the activation vectors themselves to generalize to the model鈥檚 output changed after editing the varying-length prompts.1 activation vectors at each location. Although an effective intervention may be necessary to believe a given localization hypothesis, it is not sufficient,
-- **方法与解释性关系**：该论文主要围绕 `Attribution, Rationale, Steering, Hidden, LLM, Activation, Control` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+ACTIVSCALAR 将 intervention tied 到 prompt position、layer、attention head/MLP 等局部位置。Dynamic Activation Scalars 进一步让 scalar 依赖当前 activation，形成输入条件化的 gate，而不是所有 prompt 使用固定系数。
 
-## 4. Baseline 与对比讲解
+## 3. Baseline / 对比基线
 
-- **检测到的 baseline / comparison 关键词**：We compare ACTIV S, CALAR and S TEERV, EC for, Figure 8, CALAR on GPT2-Small
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - and minimality (right) on train (crosses) and test sets (points). We compare ACTIV S CALAR and S TEERV EC for
-  - 10 Figure 8: We compare ACTIV S CALAR on GPT2-Small
+- **STEERVEC**：学习并添加高维 steering vector，是主要 baseline。
+- **ACTIVPATCH/ATTRPATCH**：activation patching 或 attribution-based intervention。
+- **固定 scalar vs dynamic scalar**：检验是否需要输入条件化。
+- **不同 layer/head/MLP location**：定位 steering 的结构。
+- **合成 conflict datasets/模板泛化**：检验 steering 能否从训练模板迁移到测试模板。
 
-## 5. Experiments 与 Findings 讲解
+## 4. Experiments / Findings：结果如何读
 
-- **可检测的数值信号**：1 X
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - intervening on a model is a prerequisite for Figure 1: We show that it is often sufficient to scale
-  - necessarily localized) interventions to the weights ple tasks. Moreover, we find activation scalars are
-  - suite of experiments, we find overall that activation Most state-of-the-art language models rely on
-  - fewer learnable parameters. Our results suggest ers of Transformer blocks, each of which consists
-  - and mlpOut on all layers and token positions of GPT2-Small. We find that ACTIV S CALAR does not fall behind
-  - Effectiveness versus Minimality. We find that
-  - Effectiveness versus Faithfulness. We find that minimal qualitatively, as it is limited to affecting
+Activation scaling 在 steering effectiveness 上整体可与 additive steering vector 相比，同时需要的可学习参数少得多。它在 conflict/counterfactual 数据上可以增强目标答案或抑制冲突答案，并且 scalar map 直接显示某些中层 attention/MLP 是关键 gate。
 
-## 6. Conclusion、局限与可复现性
+重复训练时，scalar location pattern 比高维 vector direction 更容易解释：多个随机种子往往在相似 layer/position 找到 intervention，而不是完全随机分布。Dynamic Activation Scalars 在混合任务上能根据输入改变干预强度，减少固定 scalar 对单一模板过拟合。
 
-- **结论段落线索**：quires thresholding the attribution scores associ- is supported by the Swiss Data Science Center ated with model components and then zeroing out (SDSC) PhD fellowship. V茅steinn Sn忙bjarnarson (De Cao et al., 2022; Wang et al., 2023; Conmy is funded by the Pioneer Centre for AI, DNRF grant et al., 2023; Syed et al., 2023) or corrupting them number P1. (Geiger et al., 2021; Bhaskar et al., 2024). However, this means that the intervention can be considered Limitations discrete, as it cannot smoothly facilitate different intervention strengths and directions. The scaling S TEERV EC, ACTIV S CALAR and DYN S CALAR are aspect of the 尾 hyperparameters in ACTIV S CALAR controllable via different hyperparameters: the mar- and S TEERV EC, in turn, is continuous. gin m in the effectiveness objective, 位F weigh- ing the faithfulness term and 位M weighing the Gradient-Based Steering and Interpretability. strength of the 鈩1 -regularization. There are addi- This work relies on gradient-based optimization
-- **局限/未来工作线索**：this means that the intervention can be considered Limitations；A limitation of this work is the size of models
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+作者也比较 activation scaling 与 activation patching/gradient attribution：gradient-based learning 通常更快，且能同时取得 steering 与 attribution；但参数强度、L1 正则和位置选择对最终效果非常敏感。
 
-## 7. 一句话定位
+## 5. Ablation / 机制解释
 
-这篇论文把“Activation Scaling for Steering and Interpreting Language Models”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+- 添加向量 vs 缩放已有 activation，分离 direction change 与 magnitude gating。
+- fixed vs dynamic scalar，验证输入条件化价值。
+- 各 layer/head/MLP 单独训练，观察最有效位置和跨任务重叠。
+- L1 regularization sweep，控制 intervention 稀疏性和稳定性。
+- train template/test template，对照 steering 泛化。
+
+## 6. Limitations / 局限与复现注意
+
+- 主要实验规模较小、任务较合成，不能直接推出大模型真实对话 steering。
+- 只改变 activation magnitude 可能无法表达需要新方向的行为。
+- scalar map 可读不等于它是唯一 causal circuit；多个位置可能冗余。
+- 参数正则、候选位置和 post-hoc beta 选择会显著影响结果。
+
+## 7. 两句话总结
+
+ACTIVSCALAR 用每个模型位置一个可学习 scalar 去增强或抑制已有 activation，既以远少于 steering vector 的参数实现行为控制，也给出可视化的机制位置。实验显示其 steering 效果与向量方法相当、dynamic 版本更灵活，但证据主要来自小型合成任务和特定位置搜索。
