@@ -1,64 +1,37 @@
 # 173. ReasoningRec: Bridging Personalized Recommendations and Human-Interpretable Explanations through LLM Reasoning
 
-> 逐篇阅读记录：第 173 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Millennium Bismay, Xiangjue Dong, James Caverlee
+- **Venue:** Findings of NAACL 2025
+- **Paper:** https://aclanthology.org/2025.findings-naacl.454
+- **Tags:** Recommendation, Explanation, Synthetic Data, Distillation
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Millennium Bismay, Xiangjue Dong, James Caverlee
-- **发表 venue / date**：NAACL / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.findings-naacl.454)
-- **领域标签**：Rationale, Evaluation, Reasoning, LLM, Behavior, Explain
-- **本地 PDF 文本规模**：约 11,207 个词
+传统推荐系统从 click / like 学 implicit preference，通常能预测 item，却无法说明为什么推荐。用户真正需要的是 likes、aversions、主题和风格之间的可读关系；但真实用户很少提供这样的解释，直接监督难以获得。
 
-## 1. Abstract 讲解
+## Method / Framework
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决大模型推理过程不透明、正确性信号难以从内部状态读出的问题。。方法上以Rationale为主线，结合论文摘要中的核心设定：This paper presents ReasoningRec, a reasoningbased recommendation framework that leverages Large Language Models (LLMs) to bridge the gap between recommendations and humaninterpretable explanations.In contrast to convent
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+ReasoningRec 先用大 LLM 把用户历史和 item 信息转成偏好、厌恶与 explanation，再用这些 synthetic rationales 微调小 LLM。推理时小模型同时输出推荐和解释，形成从 user-item interaction 到 human-readable reasoning 的桥。
 
-## 2. Introduction 讲解
+## Baselines / Comparisons
 
-- **引言结构**：1 Introduction tween recommendations and the human-intelligible,；4 Experimental Setup We also consider two zero-shot methods for com-；5 Results and Analysis training samples and is able to outperform all other
-- **引言关键线索**：interpretable reasoning behind them? Concretely, we propose a reasoning-based recommendation In our day-to-day life, many of our experiences are framework called ReasoningRec. The core idea driven by word-of-mouth recommendations. For is to model users and items through LLM-powered example, a friend may suggest a good book to read, generation (corresponding to the likes and dislikes knowing my preference for historical fiction and above), and then use a large LLM to generate syn- thriller novels. A work colleague may introduce me thetic explanations for why a user may like an item to a new software library based on our shared work (corresponding to the explanatory reasoning); these history. These recommendations often focus on explanations are then used to fine-tune a smaller likes and dislikes of a user and provide explanatory LLM (SLM) toward generating more accurate rec- reasoning for
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+与传统 collaborative / sequential recommendation、LLM prompting、vanilla SLM 和没有 rationale 的 fine-tuning 比较。实验分析 context quality、personalization、reasoning data 和 explanation quality，指标包括 recommendation prediction 与人工 / LLM explanation evaluation。
 
-## 3. Method / Framework 讲解
+## Experiments / Findings
 
-- **方法段落线索**：ages Large Language Models (LLMs) to bridge the gap between recommendations and human- interpretable explanations. In contrast to con- In practice, many modern recommendation sys- ventional recommendation systems that rely on tems aim to scale recommendations based on the ac- implicit user-item interactions, ReasoningRec tions of millions of users, e.g., (Kang and McAuley, employs LLMs to model users and items, fo- 2018; Tang and Wang, 2018; Koren et al., 2009; cusing on preferences, aversions, and explana- He et al., 2017; Yue et al., 2024; Sun et al., 2019). tory reasoning. The framework utilizes a larger These approaches, however, are typically not driven LLM to generate synthetic explanations for user preferences, subsequently used to fine- by such explicit human-interpretable explanatory tune a smaller LLM for enhanced recommen- reasoning, since such detailed reasons are rarely dation accuracy and human-interpretable expla- provide
-- **方法与解释性关系**：该论文主要围绕 `Rationale, Evaluation, Reasoning, LLM, Behavior, Explain` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+- ReasoningRec 的 recommendation prediction 比 SOTA 最多提升约 12.5%，同时生成与用户偏好和 item attributes 对齐的解释。
+- contextual / personalized data 质量是关键：粗糙历史会导致 plausible 但不真实的 explanation。
+- synthetic rationale 让小模型学习显式 preference reasoning，而不是只拟合 item co-occurrence。
+- 解释通常包含主题、情绪、人物和用户 dislike 的对照，因而更接近口头 word-of-mouth recommendation。
 
-## 4. Baseline 与对比讲解
+## Ablation / Error Analysis
 
-- **检测到的 baseline / comparison 关键词**：Baselines and Evaluation Metrics, In this section, Zero-shot Vanilla is prompted, ML1M, Harper and Konstan, Table 3, Recommendation performance of ReasoningRec, SASRec and, ReasoningRec outperforms all baselines, ReasoningRec, SAS- lightweight instruction finetuning, Hence, Description and User Profile, Ama- A.2 Baselines
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - (sui )t鈭1 t鈭1 4.2 Baselines and Evaluation Metrics
-  - In this section, we introduce the datasets, baseline soningRec. Zero-shot Vanilla is prompted with
-  - ML1M (Harper and Konstan, 2015) is a widely for these two baselines.
-  - Table 3: Recommendation performance of ReasoningRec and baselines across three datasets. SASRec and
-  - 5.1 ReasoningRec outperforms all baselines soning generation, showcasing the cost and com-
-  - method, ReasoningRec, with baselines like SAS- lightweight instruction finetuning framework with
+消融 user context、item description、rationale、LLM teacher 和 SLM；去掉 context 时 accuracy 与解释相关性同时下降。错误来自用户历史稀疏、item metadata 不完整、LLM 过度推断和推荐正确但理由不忠实。
 
-## 5. Experiments 与 Findings 讲解
+## Limitations
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - data significantly influences the LLM鈥檚 capac-
-  - In our experiments, we find that the ability of the recently, research has shifted towards cost and
-  - in improved performance in recommendation pre- improved performance compared to LLMs relying
-  - user profiles play a significant role for long user-
-  - that ReasoningRec outperforms the state-of-
-  - v0.1 as the LLM. outperforms a contemporary work, Rec-SAVER
-  - on NVIDIA RTX A5000 24GB GPUs. Additional Improved performance of ReasoningRec could be
+teacher-generated rationales 可能是事后合理化，LLM judge 的解释质量不等于真实用户满意度。数据与实验主要是离线 benchmark，尚未验证长期点击、信任和商业影响；生成解释还可能泄露用户敏感偏好。
 
-## 6. Conclusion、局限与可复现性
+## 两句话总结
 
-- **结论段落线索**：Maciej Besta, Nils Blach, Ales Kubicek, Robert Gersten- In this work, we studied the importance of rich con- berger, Michal Podstawski, Lukas Gianinazzi, Joanna textual and semantic information about users and Gajda, Tomasz Lehmann, Hubert Niewiadomski, Pi- items in generating human-interpretable explana- otr Nyczyk, and Torsten Hoefler. 2024. Graph of tions. We introduced ReasoningRec, a lightweight thoughts: Solving elaborate problems with large lan- guage models. In AAAI, pages 17682鈥17690. AAAI and efficient framework, to instruction finetune an Press. SLM on synthetic reasoning data generated by an LLM, conditioned on ground truth user ratings. We Andrew P. Bradley. 1997. The use of the area under the roc curve in the evaluation of machine learning observed that our proposed method outperformed algorithms. Pattern Recognition, 30(7):1145鈥1159. all the baseline methods in the recommendation prediction task while bridging the gap between rec- Karl Cobbe, Vineet Kosaraju, Mohammad Ba
-- **局限/未来工作线索**：input prompt. We assess that, LLMs inherently per- Limitations and Future Work
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
-
-## 7. 一句话定位
-
-这篇论文把“ReasoningRec: Bridging Personalized Recommendations and Human-Interpretable Explanations through LLM Reasoning”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+ReasoningRec 用大模型生成用户偏好和 item 关系的解释，再蒸馏到小模型，使推荐预测与可读理由同时提升。它证明 reasoning supervision 有用，但解释的真实性、稀疏历史和长期用户效用仍需在线验证。

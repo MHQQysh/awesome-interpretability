@@ -1,58 +1,37 @@
 # 171. On Behalf of the Stakeholders: Trends in NLP Model Interpretability in the Era of LLMs
 
-> 逐篇阅读记录：第 171 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Nitay Calderon, Roi Reichart
+- **Venue:** NAACL 2025
+- **Paper:** https://aclanthology.org/2025.naacl-long.29
+- **Tags:** Survey, Stakeholders, Interpretability Trends, Human-Centered
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Nitay Calderon, Roi Reichart
-- **发表 venue / date**：NAACL / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.naacl-long.29)
-- **领域标签**：Analysis, LLM, Behavior, Analyze
-- **本地 PDF 文本规模**：约 26,969 个词
+技术综述常按方法分类，却很少问谁需要解释、为什么需要、要解释什么以及什么形式最有用。作者收集过去十年的 NLP interpretability 论文，并用 LLM 做 relevance filtering / characterization，比较 NLP developer 与非 NLP stakeholder、不同领域和不同解释范式。
 
-## 1. Abstract 讲解
+## Method / Framework
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决大模型行为复杂、内部决策依据难以被人类理解的问题。。方法上以Analysis为主线，结合论文摘要中的核心设定：Nitay Calderon, Roi Reichart.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+论文建立 stakeholder-centered taxonomy，按 why（trust、debug、fairness、compliance）、what（input、behavior、internal component、data）和 how（salience、rationale、counterfactual、mechanistic 等）编码论文。趋势分析覆盖 NLP 以及 medicine、psychology、education、economics、neuroscience 等领域。
 
-## 2. Introduction 讲解
+## Baselines / Comparisons
 
-- **引言结构**：700 Humanities；400 Natural Sci 100；1 Introduction；3. The Scientific Perspective: Language is tightly；4. The Social Perspective: addresses the broader restrict the interpretability method to explain the；5 Trends in Model Interpretability；2021. Causalm: Causal model explanation through Faithful explanations of black-box nlp models using；2022. Shared computational principles for language
-- **引言关键线索**：125 led to widespread adoption of these systems Economics
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+比较年份、研究领域、解释目标、方法范式和 stakeholder 使用场景，而非比较模型 accuracy。LLM relevance filtering 与人工抽查形成质量控制，内部组件解释和用户可理解解释是重点对照。
 
-## 3. Method / Framework 讲解
+## Experiments / Findings
 
-- **方法段落线索**：the practical implications of these paradigms by counted, following relevance filtering by an LLM. analyzing trends from the past decade across multiple research fields. To this end, we re- Shamszare, 2023; Kasneci et al., 2023; von Garrel trieved thousands of papers and employed an and Mayer, 2023). However, these black-box mod- LLM to characterize them. Our analysis reveals els are complex and opaque (Wallace et al., 2019; significant disparities between NLP developers Calderon et al., 2023; Luo et al., 2024). While per- and non-developer users, as well as between formance has advanced, this comes at the cost of research fields, underscoring the diverse needs understanding their underlying mechanisms (Lyu of stakeholders. For example, explanations of internal model components are rarely used out- et al., 2022; Madsen et al., 2023; Singh et al., 2024). side the NLP field. We hope this paper informs The ability to explain decisions is p
-- **方法与解释性关系**：该论文主要围绕 `Analysis, LLM, Behavior, Analyze` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+- NLP interpretability 论文数量快速增长，但 NLP 之外的领域更偏向结果、案例和用户可理解解释，很少使用 neuron / internal component explanation。
+- developer 与用户对“解释应该回答什么”的需求明显不同；技术上精确的内部机制未必满足医生、教师、决策者或受影响群体的需求。
+- LLM 时代研究量增加了，但 stakeholder perspective 仍不足，很多工作默认 explanation 的消费者就是模型开发者。
+- 作者据此主张未来评测应同时报告 faithfulness、plausibility、utility、robustness、成本和受众适配，而不是单一 explanation score。
 
-## 4. Baseline 与对比讲解
+## Ablation / Error Analysis
 
-- **检测到的 baseline / comparison 关键词**：正文中存在 baseline/comparison 讨论，但文本提取未稳定识别名称。
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：未自动提取到稳定短句，需回看论文中的 Baselines、Comparison 或 Ablation 小节。
+趋势统计对 relevance filtering、年份区间、领域划分和类别定义敏感；LLM characterization 可能继承标题、摘要和术语偏差。论文用人工抽查和多维编码降低噪声，但不能把论文出现某个方法当成实际用户采用。
 
-## 5. Experiments 与 Findings 讲解
+## Limitations
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - significant disparities between NLP developers Calderon et al., 2023; Luo et al., 2024). While per-
-  - of methods that align with the objectives and significantly influence individual decision-making
-  - that align with the objectives, expectations, and ing needs, reflected in significant differences
-  - does not significantly differ between two subpopu-
-  - contain human biases and prejudices (Blodgett to improve or modify their functionality.
-  - ual decisions. Conversely, in neuroscience and so- 6 Conclusions and Recommendations
-  - tically improved the capabilities of NLP models. holders鈥 perspective. Additionally, we conducted a
+文献计量反映发表趋势而非真实部署需求；LLM 自动标注可能漏掉跨领域解释工作。stakeholder 类别和解释质量指标仍需参与式用户研究，不能从论文文本推断所有社会影响。
 
-## 6. Conclusion、局限与可复现性
+## 两句话总结
 
-- **结论段落线索**：and how parts (see the paragraph below the follow- values is an interpretability method, while visualiz- ing definition), we must first define an explanation. ing these values using the SHAP Python package2 This is because the what and how are derived from and providing guidance on interpreting these visu- the why 鈥 the stakeholders, and clearly, they are alizations constitute an explanation. part of an explanation. To this end, we have gath- ered common (though not formal) definitions from 4 Properties and Categorization seminal works in the literature (Doshi-Velez and Kim, 2017; Lipton, 2018; Murdoch et al., 2019; In this section, we propose and briefly describe Arrieta et al., 2020; Lyu et al., 2022; R盲uker et al., properties that answer the what and how questions 2023), and propose the following definition: derived from our interpretability definitions. In Ta- ble 1, we present a categorization of interpretability Explanation (explaining): paradigms based on the properties. In Appe
-- **局限/未来工作线索**：7 Limitations 24-26, 2017, Conference Track Proceedings. Open-；Linguistics, COLING 1990, University of Helsinki, language models: Challenges, limitations, and rec-
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
-
-## 7. 一句话定位
-
-这篇论文把“On Behalf of the Stakeholders: Trends in NLP Model Interpretability in the Era of LLMs”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+这篇综述把 NLP interpretability 从方法清单改写成 stakeholder 需求问题，显示开发者与外部用户、NLP 与其它领域对解释的偏好存在明显差异。它的主要贡献不是新解释算法，而是提醒研究者把受众、目的、faithfulness 和实际 utility 一起纳入评测。
