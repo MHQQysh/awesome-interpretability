@@ -1,57 +1,39 @@
 # 164. FLUTE: Figurative Language Understanding through Textual Explanations
 
-> 逐篇阅读记录：第 164 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Tuhin Chakrabarty, Arkady Saakyan, Debanjan Ghosh, Smaranda Muresan
+- **Venue:** EMNLP 2022
+- **Paper:** https://aclanthology.org/2022.emnlp-main.481
+- **Tags:** Figurative Language, NLI, Explanation, Dataset
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Tuhin Chakrabarty, Arkadiy Saakyan, Debanjan Ghosh, Smaranda Muresan
-- **发表 venue / date**：EMNLP / 2022/01
-- **正式页面**：[Paper](https://aclanthology.org/2022.emnlp-main.481)
-- **领域标签**：Probing, Rationale, Evaluation, Reasoning, LLM, Behavior, Explain
-- **本地 PDF 文本规模**：约 12,089 个词
+figurative language 的 NLI benchmark 容易含有 spurious correlations，模型能猜对 entail / contradict 却不理解 sarcasm、simile、metaphor 和 idiom。已有 e-SNLI 有解释，但缺少针对 figurative language 的 explanation dataset。
 
-## 1. Abstract 讲解
+## Method / Framework
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决大模型推理过程不透明、正确性信号难以从内部状态读出的问题。。方法上以Probing为主线，结合论文摘要中的核心设定：Figurative language understanding has been recently framed as a recognizing textual entailment (RTE) task (a.k.a.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+FLUTE 包含 9,000 个 figurative NLI instances，覆盖 Sarcasm、Simile、Metaphor、Idioms；每项有 literal / figurative sentence pair、entail / contradict label 和自然语言 explanation。数据用 GPT-3 model-in-the-loop 生成候选，再由 crowd workers 和 expert annotators 修订、过滤和保证质量。
 
-## 2. Introduction 讲解
+用 T5 fine-tune 同时做 NLI label 与 explanation generation，测试 textual explanation 是否能让模型 right for the right reasons。
 
-- **引言结构**：1 Introduction 2021a), leading to novel datasets such as e-SNLI；2 Model-in-the-loop for building FLUTE paraphrases are complex and often more creative；3 Experimental Setup；4 Results and Discussion ative compared to gold rationales since rationales；5 Related Work；6 Conclusion our FLUTE data does not contain any toxic text；2021. Rationale-inspired natural language ex- Marco Tulio Ribeiro, Sameer Singh, and Carlos；2022. Beyond the imitation game: Quantifying and
-- **引言关键线索**：(Camburu et al., 2018). Yet, there is no such dataset Figurative language such as metaphors, similes or for figurative language, hindering our ability to as- sarcasm plays an important role in enriching human sess LLMs鈥 genuine understanding of figurative communication, allowing us to express complex language. ideas and emotions in an implicit way (Roberts In this paper, we make several contributions to- and Kreuz, 1994; Fussell and Moss, 1998). How- wards the goal of building models and assessing ever, understanding figurative language still re- their ability to understand figurative language: mains a bottleneck for natural language processing (Shutova, 2011). Recently Jhamtani et al. (2021) 鈥 FLUTE: a new benchmark for figurative show that when faced with dialog contexts con- language understanding through textual sisting of figurative language,some models show explanations. FLUTE cont
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## Baselines / Comparisons
 
-## 3. Method / Framework 讲解
+比较只预测 NLI label 的 T5、带 explanation multitask T5、不同 figurative category 和人工 / GPT 生成数据。分析与 e-SNLI、其它 figurative NLI benchmark 的 label 预测和 explanation quality。
 
-- **方法段落线索**：3, crowd workers, and expert annotators. We near human-level performance on in-domain test show how utilizing GPT-3 in conjunction with sets, yet turn brittle when evaluated against out-of- human annotators (novices and experts) can aid domain or adversarial examples (Glockner et al., in scaling up the creation of datasets even for such complex linguistic phenomena as figura- 2018; Ribeiro et al., 2016, 2020). To tackle these tive language. The baseline performance of the problems, research in NLI has argued that it is not T5 model fine-tuned on FLUTE shows that our enough to correctly predict the entail/contradict la- dataset can bring us a step closer to develop- bels, but also to explain the decision using natural ing models that understand figurative language language explanations that are comprehensible to through textual explanations. an end-user assessing model鈥檚 reliability (Camburu et al., 2018; Majumder et al., 2021; Wiegreffe
-- **方法与解释性关系**：该论文主要围绕 `Probing, Rationale, Evaluation, Reasoning, LLM, Behavior, Explain` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## Experiments / Findings
 
-## 4. Baseline 与对比讲解
+- T5 在 FLUTE 上能学到 figurative entailment / contradiction，但性能明显低于普通 NLI 的简单 in-domain 结果，说明 figurative understanding 更难。
+- explanation supervision 让模型输出更接近 literal-to-figurative 语义桥接，而不是只依赖表面词。
+- GPT-3 + novice + expert 的协作能扩展复杂 figurative annotations；expert filtering 对解释完整性和隐含语义很重要。
+- 不同类别表现不同：idiom / metaphor 需要背景知识和隐式映射，sarcasm 更依赖语气与社交上下文。
 
-- **检测到的 baseline / comparison 关键词**：The baseline performance of, NLI has argued that, We would like to, Hypothesis only baselines in
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - tive language. The baseline performance of the problems, research in NLI has argued that it is not
-  - ducting baseline experiments with state-of-the-art We would like to thank the anonymous reviewers
-  - Hypothesis only baselines in natural language infer-
+## Ablation / Error Analysis
 
-## 5. Experiments 与 Findings 讲解
+消融 explanation supervision、category、GPT-3 candidate 与人工修订。去掉 explanation 会保留高 label accuracy 但降低 right-reason 可信度；错误主要来自 figurative expression 被 literal 解读、缺少文化知识、以及 premise / hypothesis 的关系不止一跳。
 
-- **可检测的数值信号**：50X, 22.2 points
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - tions (Section 3.2). We show that the model detection (Chauhan et al., 2020). Thus, we select
-  - are significantly higher for each type of figurative tions from T5FLUTE compared to T5e-SNLI . Like-
-  - 6 Conclusion our FLUTE data does not contain any toxic text
+## Limitations
 
-## 6. Conclusion、局限与可复现性
+GPT-3 生成候选可能引入模板偏差和 hallucination，crowd / expert 标注成本仍高。9,000 条数据覆盖四类英文表达，不能代表跨文化、跨语言 figurative language；NLI label 和 explanation 的一致性也不等于模型内部真正理解。
 
-- **结论段落线索**：generated by the model are still imperfect and may Table 3 shows accuracy at varying explanation introduce noise that negatively affects the predic- score thresholds. A threshold of 0% does not ac- tion. The positive score of gold rationales indicates count for the quality of the textual explanation and that explanations provided in the FLUTE dataset are is equivalent to simply reporting label accuracy. indeed useful for the model to make predictions. With an increase in threshold to greater than 50% Table 3 also presents the Hscore scores for ex- we see accuracy scores dropping almost by half planations collected from human evaluation (see for T5e-SNLI , showing most explanations generated Appendix B and prior work (Kayser et al., 2021; from the model trained on e-SNLI are of poor qual- Majumder et al., 2021) for details on computa- ity. By increasing the threshold to greater than 60%, tion). We notice the scores for T5FLUTE are 51.1, the accuracy scores further decrease, demonstrat- 
-- **局限/未来工作线索**：4 casm, we leave it for the future work.；Limitations In Proceedings of the 2021 AAAI/ACM Conference
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 两句话总结
 
-## 7. 一句话定位
-
-这篇论文把“FLUTE: Figurative Language Understanding through Textual Explanations”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+FLUTE 将 figurative NLI 与 textual explanations 结合，使模型不仅要判断 entailment，还要说明 literal 与 figurative meaning 如何连接。数据和 T5 baseline 证明解释监督有价值，但隐含文化知识、类别差异和数据生成偏差仍限制泛化。
