@@ -1,64 +1,46 @@
 # 158. “Will You Find These Shortcuts?” A Protocol for Evaluating the Faithfulness of Input Salience Methods for Text Classification
 
-> 逐篇阅读记录：第 158 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** S. Feng, Jordan Boyd-Graber and collaborators
+- **Venue:** EMNLP 2022
+- **Paper:** https://aclanthology.org/2022.emnlp-main.64
+- **Tags:** Faithfulness, Salience, Shortcut, Evaluation
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Jasmijn Bastings, Sebastian Ebert, Polina Zablotskaia, Anders Sandholm, Katja Filippova
-- **发表 venue / date**：EMNLP / 2022/01
-- **正式页面**：[Paper](https://aclanthology.org/2022.emnlp-main.64)
-- **领域标签**：Attribution, Rationale, Evaluation, Transformer, Behavior, Analyze
-- **本地 PDF 文本规模**：约 11,045 个词
+输入 salience 方法常被用来解释文本分类器，但一个显眼 token 不一定是模型真正依赖的 causal evidence。作者关注 shortcut：模型可能靠评分数字、固定 token 顺序或数据 artifact 做决定；如果 salience 排名找不到这些 shortcut，解释就不 faithful。
 
-## 1. Abstract 讲解
+论文提出协议，让研究者先提出模型可能使用的 shortcut，再构造保持标签但只改变 shortcut 的数据，测试 attribution 是否把 shortcut token 排到前面。它的核心警告是：salience 方法的配置（L1 / dot product、logit / probability、baseline）会显著改变结论。
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Attribution为主线，结合论文摘要中的核心设定：Feature attribution a.k.a.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## Method / Framework
 
-## 2. Introduction 讲解
+对每个 classifier / dataset，协议包括：
 
-- **引言结构**：1 Introduction；3. Train two models of the same architecture class of problems that salience methods could be；4. Verify that the shortcut tokens can indeed be Single token (st): The simplest possible and still；6. Compute the faithfulness metrics by compar- Token in context (tic): Another realistic lexical；2. The model trained on the original data (the；3 Experimental Setup computed the minimum and mean accuracy on all；4 Results；7 Limitations
-- **引言关键线索**：medical domain, for example, heatmaps over im- A prominent class of explainability techniques as- ages helped uncover so-called shortcuts (Geirhos sign salience scores to the input features, which et al., 2020) or spurious correlations between data reflect the importance of the features to the artifacts like doctor marks or tags and the predicted model鈥檚 decision. When applied to text classifiers disease1 (Codella et al., 2019; Sundararajan et al., those methods produce highlights over the input 2019; Winkler et al., 2019, inter alia). (sub)words. Interestingly, different methods may Spurious correlations plague NLP models too produce surprisingly dissimilar highlights. Figure 1 (Gururangan et al., 2018; Poliak et al., 2018; Be- shows this using the Language Interpretability Tool linkov et al., 2019; Rosenman et al., 2020; Geva (Tenney et al., 2020). So a natural question is: et al., 201
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+1. 定义可验证的 shortcut hypothesis；
+2. 构造合成或自然文本变体，控制真正任务证据与 shortcut；
+3. 用 salience map 对 token 排名；
+4. 用 precision、rank、deletion / insertion 或 shortcut recovery 检查解释是否找到了预先知道的证据。
 
-## 3. Method / Framework 讲解
+论文系统测试 Gradient × Input、Gradient Norm、Integrated Gradients 和 LIME，并在 LSTM / BERT 上比较各种 baseline token masking、reference embedding、logit / probability 等配置。
 
-- **方法段落线索**：Jasmijn Bastings Sebastian Ebert鈭 Polina Zablotskaia鈭 Anders Sandholm Katja Filippova Google Research {bastings,eberts,polinaz,sandholm,katjaf}@google.com Abstract Feature attribution a.k.a. input salience meth- ods which assign an importance score to a feature are abundant but may produce surpris- ingly different results for the same model on the same input. While differences are expected if disparate definitions of importance are as- sumed, most methods claim to provide faith- Figure 1: Salience maps produced by four common ful attributions and point at the features most methods on a sentiment classification example (SST2) relevant for a model鈥檚 prediction. Existing for a BERT model. The same token (eastwood) is as- work on faithfulness evaluation is not conclu- signed the highest (Grad-L2), the lowest (GxI, LIME) sive and does not provide a clear answer as to and a mid-range (IG) importance score (color intensity how different method
-- **方法与解释性关系**：该论文主要围绕 `Attribution, Rationale, Evaluation, Transformer, Behavior, Analyze` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## Baselines / Comparisons
 
-## 4. Baseline 与对比讲解
+比较四类 salience 方法、不同模型、不同 shortcut 类型、不同 mask token 和不同 attribution baseline。每种配置同时用原始数据与人工构造 shortcut data，避免把单一方法在单一设置上的高分误当成通用 faithfulness。
 
-- **检测到的 baseline / comparison 关键词**：Making such probabilities, Toxicity, Wulczyn et al, Random baseline, RAND, SST2 IMDB Toxicity or, UNK or, MASK, Li et al, LSTM models but does, BERT, Tab
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - rating is made explicit in the text. Making such probabilities, choice of baseline) may have a
-  - treated differently by the model as compared with
-  - 鈥 Toxicity (Wulczyn et al., 2017) is a varied ods and the Random baseline (RAND) to obtain
-  - SST2 IMDB Toxicity or UNK or [ MASK ] vectors can serve as baseline
-  - trained on a shortcut version of the training data. baseline and the original input x1:n in m steps. We
-  - with the input embedding xi minus the baseline.
+## Experiments / Findings
 
-## 5. Experiments 与 Findings 讲解
+- salience 方法能否找到 shortcut 强烈依赖任务和配置，没有一个方法在所有数据集上稳定最好。
+- Gradient × Input、IG、LIME 等在 BERT 与 LSTM 上的排名不同；把 logits 换成 probabilities、把 UNK 换成 MASK、改变 IG baseline 都可能改变结果。
+- 某些被文献认为次优的配置，在揭示 lexical shortcut 时反而更好；因此复现解释性结论必须记录完整 configuration。
+- 任务性能高不代表 salience faithful：模型可能靠一个 shortcut 得到高 accuracy，而解释方法仍把内容词排在前面。
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - lexical shortcuts apparent to the developer is thus a significant effect on its performance.
-  - which would then indeed help them improve both of configurations of the four most popular
-  - places the shortcut tokens on top of its salience ing suboptimal may outperform those claimed
-  - models, GRADl2 achieves high precision and rank IG performance does not improve much with
-  - datasets (Tab. 3 and 7). The lowest but still compar- significant improvement for LSTM models. Also
-  - atively high precision (0.87) is on IMDB:tic where for BERT, the precision numbers improve only for
-  - for IG when using BERT ( ). Using the [ MASK ] baseline (with logits) resulted in an improvement in the scores
+## Ablation / Error Analysis
 
-## 6. Conclusion、局限与可复现性
+主要消融是 shortcut 类型、masking token、baseline embedding、目标输出、L1 / dot-product aggregation 和模型架构。错误来自 shortcut 不可识别、多个 token 的组合效应、删除 token 改变了输入分布，以及 salience 只反映局部梯度而不是全局因果依赖。作者建议先为每个任务写出 shortcut 假设，再选择能检验它的 attribution 配置。
 
-- **结论段落线索**：et al., 2017) and there exist formal definitions of explanation fidelity (Yeh et al., 2019). However, We have argued for evaluating input salience meth- these have not been connected to model debugging ods with respect to how helpful they would be for where it is the top of a salience ranking that matters discovering shortcuts that are learned by the model. most. In the vision domain, our work is closest to This seems to be a clear use case from the model Adebayo et al. (2020, 2022), who also explore the developer perspective. To achieve this, we pro- debugging scenario with salience maps, Yang and posed a protocol for method evaluation and applied Kim (2019), who use synthetic data to obtain the it to three variants of lexical shortcuts (single to- ground truth for pixel importance, and Hooker et al. ken, token in context, and ordered pair) which are (2019), who contrast the performance of the same a proxy for shortcut heuristics that occur in com- model trained on original and modifi
-- **局限/未来工作线索**：未稳定识别 limitations 小节；需要结合作者讨论和附录核对。
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## Limitations
 
-## 7. 一句话定位
+协议依赖研究者事先提出 shortcut，无法发现完全未知的模型机制。实验主要覆盖文本分类、常见 salience 方法和有限模型；真实语言中的长程交互、多 token shortcut 和生成任务需要额外设计。faithfulness 指标也可能被合成数据的人工结构影响。
 
-这篇论文把““Will You Find These Shortcuts?” A Protocol for Evaluating the Faithfulness of Input Salience Methods for Text Classification”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+## 两句话总结
+
+论文把 salience faithfulness 变成“是否能找回预先构造的 shortcut evidence”的可检验协议，而不是只展示漂亮热力图。结果说明方法和配置差异足以反转结论，解释性实验必须同时报告 shortcut hypothesis、masking、baseline 和模型细节。

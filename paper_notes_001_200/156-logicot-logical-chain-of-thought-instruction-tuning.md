@@ -1,59 +1,39 @@
 # 156. LogiCoT: Logical Chain-of-Thought Instruction Tuning
 
-> 逐篇阅读记录：第 156 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Hanmeng Liu, Zhiyang Teng, Leyang Cui, Chaoli Zhang, Qiji Zhou, Yue Zhang
+- **Venue:** EMNLP Findings 2023
+- **Paper:** https://aclanthology.org/2023.findings-emnlp.191
+- **Tags:** Logical Reasoning, Instruction Tuning, CoT, Self-Instruct
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Hanmeng Liu, Zhiyang Teng, Leyang Cui, Chaoli Zhang, Qiji Zhou, Yue Zhang
-- **发表 venue / date**：EMNLP / 2023/01
-- **正式页面**：[Paper](https://aclanthology.org/2023.findings-emnlp.191)
-- **领域标签**：Rationale, Evaluation, Reasoning, Behavior, Analyze
-- **本地 PDF 文本规模**：约 11,780 个词
+通用 instruction tuning 能提升对话和生成，却不一定教会模型复杂逻辑推理。GPT-4 的逻辑 CoT 质量很高，但闭源，社区需要能训练小模型的逻辑 reasoning instruction data。论文提出 LogiCoT，用 GPT-4 和已有逻辑推理样例生成带规则名、逐步证明和最终答案的训练集。
 
-## 1. Abstract 讲解
+## Method / Framework
 
-- **研究问题**：模型推理过程难以观察和验证，研究需要比较推理链、结构化证据和最终答案之间是否一致。
-- **摘要主线**：解决大模型推理过程不透明、正确性信号难以从内部状态读出的问题。。方法上以Rationale为主线，结合论文摘要中的核心设定：Generative Pre-trained Transformer 4 (GPT-4) demonstrates impressive chain-of-thought reasoning ability.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+作者先收集逻辑任务的 premises、hypothesis、label 或 rule supervision，再设计 prompt，让 GPT-4 输出每一步使用的逻辑规则，例如 biconditional elimination、hypothetical syllogism、modus ponens。随后过滤格式错误、矛盾、无法从 premises 推出的 rationale，并以 instruction-input-CoT-output 形式微调开源模型。
 
-## 2. Introduction 讲解
+LogiCoT 的目标不是只让模型输出 Yes / No，而是让它显式列出规则、事实和冲突点，减少自然语言 CoT 中跳步和循环论证。模型与数据权重都公开，便于比较 CoT prompting、普通 instruction tuning 和直接 fine-tuning。
 
-- **引言结构**：1 Introduction Hypothetical Syllogism:
-- **引言关键线索**：From the fact that it is cloudy if and only if Jessica is playing a game we can paraphrasing. However, they fall short of help- infer that if Jessica plays a game, then it is cloudy via biconditional elimination. Finally, from the fact that if it is late, then Jessica is playing a game, and that if ing the model handle complex reasoning tasks. Jessica plays a game, then it is cloudy we can infer that if it is late, then it is cloudy via transitivity, which contradicts that The fact that it is late does not To bridge the gap, this paper presents LogiCoT, imply that it is cloudy. a new instruction-tuning dataset for Logical Therefore, the answer is no. GPT-4 reasoning step by step: Chain-of-Thought reasoning with GPT-4. We elaborate on the process of harvesting instruc- Given the premises:
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## Baselines / Comparisons
 
-## 3. Method / Framework 讲解
+比较 GPT-3.5 / GPT-4 prompting、Alpaca / Vicuna 类通用 instruction tuning、FLAN / T0、无 CoT 的 label-only tuning 和现有逻辑推理模型。任务涵盖 deductive reasoning、ruleTaker / AbductionAndNegation、FOLIO、ProofWriter 等逻辑与自然语言推理数据。
 
-- **方法段落线索**：marks indicate remarkable performance elevations large language models (LMs). The core innova- compared to state-of-the-art instruction-tuned mod- tion lies in its prompt-based learning combined els, showing the promise of leveraging complex with counterfactual regularization to ensure faith- CoT instruction data in the instruction-tuning pro- fulness in the reasoning over generated rationales. cess of LLMs. While PINTO excels in achieving superior perfor- Our work is in line with recent research indicat- mance across in-distribution and out-of-distribution ing that smaller language models can achieve com- test sets and ensuring that rationales are faithful, petitive multi-step reasoning abilities when special- its primary motivation is different from LogiCoT. ized on targeted CoT tasks. Examples of these tasks Whereas PINTO emphasizes rationale transparency include the execution of SQL commands, mathe- and faithfulness, LogiCoT is gear
-- **方法与解释性关系**：该论文主要围绕 `Rationale, Evaluation, Reasoning, Behavior, Analyze` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## Experiments / Findings
 
-## 4. Baseline 与对比讲解
+- LogiCoT fine-tuning 让较小模型在逻辑任务上获得更稳定的 step-by-step reasoning，通常超过只学最终标签的 baseline。
+- 规则名称作为中间监督帮助模型区分蕴含、双条件、否定和反事实，解释更容易与 formal proof 对齐。
+- 在未见逻辑任务上存在迁移收益，说明数据不只是背诵固定模板；但任务和语言形式变化大时，收益下降。
+- GPT-4 生成的 rationale 在人工或自动规则检查中大多语义连贯，但仍有“结论正确、证明中间跳步”的样本，过滤和验证不可省略。
 
-- **检测到的 baseline / comparison 关键词**：To better understand the
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - baselines. To better understand the specific contributions
+## Ablation / Error Analysis
 
-## 5. Experiments 与 Findings 讲解
+消融 rule labels、rationale、self-instruction 数据量、过滤规则和不同 reasoning prompt。去掉规则名后模型仍能生成流畅 chain，却更容易使用错误 inference；只保留答案会提升格式简单任务，却损害复杂逻辑泛化。常见错误是把 converse 当 implication、忽略否定、从不充分条件推出结论和把 contradiction 当支持。
 
-- **可检测的数值信号**：10 points, 20 points
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - embodying the ability to infer conclusions based weights.
-  - 2023a) presents a significant gap, inhibiting the
-  - soning, represents a significant gap in the current
-  - strated marked improvements in various reasoning which is illustrated in Figure 1. We first establish a
-  - tions for each premise and conclusion, which are formal logic, predicting possible inferences from
-  - eration quality. vance, we acknowledge room for improvement in
-  - Geography 28.8 52.5 improvement is salient given that our model has
+## Limitations
 
-## 6. Conclusion、局限与可复现性
+GPT-4 teacher 的错误可能被蒸馏，形式逻辑验证也不覆盖自然语言中的歧义。模型训练规模、任务模板和 proof annotation 仍影响结果；逻辑 CoT 的语言解释不一定是模型内部真正的搜索过程。复杂 FOL、量词、非单调推理和开放世界知识没有被完整覆盖。
 
-- **结论段落线索**：on a structured progression of premises. The dearth of such abilities in community models (Liu et al., 2 Related Work 2023a) presents a significant gap, inhibiting the Instruction tuning LLMs. Instruction-tuning of development of open LLMs with strong chain rea- Large Language Models (LLMs) has become a soning. While GPT-4 has demonstrated its ability thriving research area in Natural Language Process- to produce high-quality CoT reasoning output, the ing (NLP), aiming to enable zero-shot generaliza- potential of generating CoT instruction tuning data tion on unseen tasks (Zhong et al., 2021; Ouyang using this model remains largely unexplored. The et al., 2022; Wei et al., 2022). This involves fine- need to cover more diverse and complex reason- tuning LLMs to perform diverse tasks by following ing scenarios, particularly multi-step logical rea- a set of instructions, making the task source an es- soning, represents a significant gap in the current sential component of instruction tuni
-- **局限/未来工作线索**：The machine reading comprehension task is de- faithfulness, and future work will aim to refine the；datasets used. Future research can delve deeper enhance a generative LLM. Future work includes
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 两句话总结
 
-## 7. 一句话定位
-
-这篇论文把“LogiCoT: Logical Chain-of-Thought Instruction Tuning”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+LogiCoT 用 GPT-4 生成带逻辑规则的逐步证明，再对小模型做 instruction tuning，把“答案正确”推进到“能指出使用了什么规则”。它改善了逻辑推理和解释格式，但 teacher 噪声、规则覆盖与 rationale 忠实性仍需要自动证明器或人工验证。

@@ -1,61 +1,40 @@
 # 151. Scaling Vision-Language Models with Sparse Mixture of Experts
 
-> 逐篇阅读记录：第 151 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Sheng Shen, Zhewei Yao, Chunyuan Li, Trevor Darrell, Kurt Keutzer, Yuxiong He
+- **Venue:** EMNLP Findings 2023
+- **Paper:** https://aclanthology.org/2023.findings-emnlp.758
+- **Tags:** Vision-Language, Sparse MoE, Routing, Scaling
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Sheng Shen, Zhewei Yao, Chunyuan Li, Trevor Darrell, Kurt Keutzer, Yuxiong He
-- **发表 venue / date**：EMNLP / 2023/01
-- **正式页面**：[Paper](https://aclanthology.org/2023.findings-emnlp.758)
-- **领域标签**：Evaluation, MLLM, LLM, Behavior, Evaluate
-- **本地 PDF 文本规模**：约 14,179 个词
+大规模 vision-language model 能处理 VQA、视觉推理和图文检索，但 dense 模型的参数量、训练和部署成本很高。MoE 可以增加总参数而只激活少量 expert；现有 multimodal MoE 多偏对比学习或 vision-only benchmark，不能说明它在生成式视觉语言任务上如何扩展，也不清楚稀疏 routing 是否让模型行为更可解释。
 
-## 1. Abstract 讲解
+## Method / Framework
 
-- **研究问题**：研究试图建立模型内部表征、外部行为和可解释结论之间的稳定联系。
-- **摘要主线**：解决多模态大模型视觉-语言证据如何被使用和对齐难以解释的问题。。方法上以Evaluation为主线，结合论文摘要中的核心设定：The field of natural language processing (NLP) has made significant strides in recent years, particularly in the development of large-scale vision-language models (VLMs).
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+作者提出 VL-MoE，在视觉、文本和跨模态 feed-forward 层引入 sparse experts，并用 modality-aware router 根据 token 选择 V-FFN、T-FFN 或 VL-FFN。模型保留共享 attention，只有 top-k experts 参与计算，从而增加参数容量而控制每 token FLOPs。
 
-## 2. Introduction 讲解
+训练覆盖 image-text contrastive、image-text matching / generation 等任务；为防止 expert load imbalance，加入 auxiliary load-balancing loss。作者还记录不同输入 token 的 routing，分析 image / text / multimodal expert 是否形成可解释的 specialization。
 
-- **引言结构**：2 Related Work For pretraining objectives, multiple cross-modal pre-；0 Train2K；2023. Openflamingo: An open-source framework for Meng Huat Tiong, Junqi Zhao, Weisheng Wang,；2019. ViLBERT: Pretraining task-agnostic visiolin-；2021. Florence: A new foundation model for com-；35 LIMoEsmall/E16
-- **引言关键线索**：2022), where the authors proposed a modal-agnostic The ability to understand and generate natural language CLIP-style (Radford et al., 2021) multimodal MoEs ar- from visual information is a critical component of many chitecture, but their focus is mainly on the contrastive real-world applications, including visual question an- pre-training objective and vision-only downstream tasks. swering (VQA), visual reasoning, and multimodal in- There are two limitations in this setting: (1) The increas- formation retrieval. In recent years, the success of deep ing model capacity of MoEs under the the simple con- learning in natural language processing (NLP) has led to trastive objective can easily lead to over-fitting issues. the development of large-scale vision-language models (2) The vision-only benchmarking does not reveal the (VLMs) (Tan and Bansal, 2019; Chen et al., 2020; Li full power of sc
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## Baselines / Comparisons
 
-## 3. Method / Framework 讲解
+与 dense vision-language Transformer、LIMoE、不同 expert 数、不同 modality routing 和不同规模 VL-MoE 比较。下游任务包括 VQA、NLVR2、image-text retrieval，以及视觉分类 / zero-shot transfer；指标为 VQA score、NLVR2 accuracy、retrieval recall 和分类 accuracy，同时报告参数、显存、吞吐。
 
-- **方法段落线索**：ing this challenge is the use of sparsely-gated ikhin et al., 2020; Zoph et al., 2022; Du et al., 2022). mixture-of-experts (MoE) techniques, which These models are motivated by the need to increase divide the model into smaller, specialized sub- model parameters while controlling compute costs. In models that can jointly solve a task. In this addition, these models provide other advantages, includ- paper, we explore the effectiveness of MoE in ing sparsity that can mitigate catastrophic forgetting in scaling vision-language models, demonstrating continual learningg (Collier et al., 2020; Komatsuzaki its potential to achieve state-of-the-art perfor- et al., 2022), and an inductive bias that can enhance mance on a range of benchmarks over dense performance in multitask learningg (Ma et al., 2018; models of equivalent computational cost. Our Kudugunta et al., 2021; Kim et al., 2021b). Overall, the research offers valuable insights into st
-- **方法与解释性关系**：该论文主要围绕 `Evaluation, MLLM, LLM, Behavior, Evaluate` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## Experiments / Findings
 
-## 4. Baseline 与对比讲解
+- 在相同或相近计算成本下，VL-MoE 在多项 vision-language benchmark 上超过 dense baseline，证明 MoE 扩容不仅适用于纯文本。
+- expert 数增加时性能总体上升，但收益受 routing 稳定性和负载均衡约束；专家池太大而没有足够 auxiliary loss 会产生 token dropping 和训练崩溃。
+- 视觉 token、文本 token 与跨模态 token 的 routing 分布不同，说明 expert 学到了一定 modality specialization；这种路由比 dense FFN 更容易提供行为层面的解释。
+- auxiliary loss 对训练稳定性关键；没有它，少数 expert 会吸收大量 token，导致其它 expert 没有训练信号和最终性能下降。
+- 与 LIMoE 的比较显示，仅有 sparse multimodal architecture 不保证随规模稳定提升，生成式目标和路由设计共同决定收益。
 
-- **检测到的 baseline / comparison 关键词**：Following BE I T, Bao et al, As shown Table 2, VL-MoE with two
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - fair comparison, we provide details on the amount of with 1k classes. Following BE I T (Bao et al., 2022a) and
-  - with a comparably modest architecture size and training As shown Table 2, we compare VL-MoE with two
-  - ple and performant baseline for vision and language.
+## Ablation / Error Analysis
 
-## 5. Experiments 与 Findings 讲解
+消融包括 expert 数、expert pool 规模、共享 / 分离 modality experts、auxiliary loss 和不同 scaling strategy。主要失败来自 load imbalance、capacity overflow、token dropping 和大模型路由噪声；某些任务更偏好 modality-specific expert，另一些需要共享 cross-modal expert，因此完全隔离专家也会损害 transfer。
 
-- **可检测的数值信号**：1X
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - has made significant strides in recent years, models like Flamingo-80B (Alayrac et al., 2022), BE I T-
-  - Our experiments demonstrate that MoE can significantly et al., 2021; Jia et al., 2021; Yuan et al., 2021) separately
-  - improve the efficiency and effectiveness of VLMs, en- encodes each modality with different encoders. While
-  - In summary, our contributions are as follows: However, this design sacrifices efficiency for improved
-  - bers, and scaling either T-FFN or V-FFN alone, for improved scalability and achieving state-of-the-art
-  - et al., 2020; Kim et al., 2021a); (2) Generative mod- While many works aim to improve the gating mecha-
-  - deemed more informative. Our results show that BPR 2017) for T-FFN鈥檚 MoE and averaged loading loss and
+## Limitations
 
-## 6. Conclusion、局限与可复现性
+论文仍需要大规模训练资源，VLM routing 的可解释性只是 token-to-expert 相关性，不等于 expert 内部学到清晰概念。模型主要是 2023 年的视觉语言架构，不能直接推断今天的 decoder-only multimodal LLM。路由还受 batch、capacity 和 auxiliary loss 影响，跨数据集稳定性需要更多研究。
 
-- **结论段落线索**：been scaled in VL-MoE, as reflected in the pretraining plot in Figure 2 (the difference of VLM loss between We conduct ablation studies to analyze the contributions VL-MoE and dense BE I T-3 model is smaller compared of Mixture-of-Experts module used in VL-MoE from to that of MLM and MIM loss). We leave the scale of different perspectives. We evaluate the models on visual the VL-FFN module for future work, considering the reasoning (NLVR2), image-text retrieval (Flickr30k), increasing instability in modal-agnostic MoE architec- image classification (ImageNet-1k) and natural lan- tures demonstrated in LIM O E (Mustafa et al., 2022). guage inference (MNLI-m). 11335 Scaling Strategy NLVR2 Flickr30k ImageNet MNLI-m Avg. T-MoE V-MoE dev test-P TR R@1 IR R@1 Acc@1 Acc [1] 鉁 鉁 67.42 68.21 80.4 61.7 67.2 54.3 66.5 [2] 鉁 鉁 72.42 72.73 83.2 64.7 67.8 58.3 69.9 [3] 鉁 鉁 71.19 72.23 82.9 64.5 69.2 55.2 69.2 [4] 鉁 鉁 72.98 73.34 84.7 65.3 69.0 58.1 70.6 Table 3: Ablation studies of scaling strategies
-- **局限/未来工作线索**：swering (VQA), visual reasoning, and multimodal in- There are two limitations in this setting: (1) The increas-；the VL-FFN module for future work, considering the reasoning (NLVR2), image-text retrieval (Flickr30k),
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 两句话总结
 
-## 7. 一句话定位
-
-这篇论文把“Scaling Vision-Language Models with Sparse Mixture of Experts”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+VL-MoE 用稀疏、模态感知的 experts 扩大视觉语言模型容量，并通过 routing 分析展示了视觉、文本和跨模态 token 的一定 specialization。实验说明 MoE 能在相近计算下提升多项 VLM 指标，但负载均衡、token dropping 和路由解释的因果性仍是核心问题。
