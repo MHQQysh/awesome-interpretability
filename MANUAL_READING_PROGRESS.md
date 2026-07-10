@@ -45,6 +45,7 @@
 | 451-460 | 已完成 | 已逐篇读取本地 PDF，覆盖 greater-than circuit、intrinsic Transformer Programs、心理健康 LLM 风险、transient ICL、KG 路径忠实推荐、VISIT 信息流、跨任务 circuit reuse、DeepDecipher、编程错误解释和 Multimodal-CoT |
 | 461-470 | 已完成 | 已逐篇读取可获得全文；465 为 ACM Multimedia 闭源条目，明确记录摘要/元数据证据边界；其余覆盖 localization 与 editing 因果差异、法律 RAG 解释、DDCoT、多级脑网络 attention、LLM+MLN 医疗解释、meaning 理论、knowledge-driven CoT、线性表示几何和 SASC 黑盒解释 |
 | 471-480 | 已完成 | 已逐篇读取可获得全文；471 为 CIKM 开放 PDF/摘要证据，覆盖 neural ranking embedding geometry、递归程序 shortcut、CoK、N2G、successor heads、instruction tuning 内部变化、多模态 sentiment 文本化、视觉 neuron 解释、RAG survey 和 GPT-4 医疗评估 |
+| 481-490 | 已完成 | 已逐篇读取可获得全文；482 为 TechRxiv survey 摘要/元数据证据边界；其余覆盖 TPUv4 系统、性别偏见与不忠实解释、DPO、StarCoder、代码解释教育、外部知识反馈、GPT-NER 和 augmented LM survey |
 | 461-470 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
 | 471-480 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
 | 481-490 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
