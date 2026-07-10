@@ -1,58 +1,22 @@
 # 073. Layered Bias: Interpreting Bias in Pretrained Large Language Models
 
-> 逐篇阅读记录：第 73 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：BlackboxNLP 2023
+- **论文**：[ACL Anthology](https://aclanthology.org/2023.blackboxnlp-1.22/)
 
-## 0. 论文信息
+## Introduction / Method
 
-- **作者**：Nirmalendu Prakash, Roy Ka-Wei Lee
-- **发表 venue / date**：ACL / 2023/01
-- **正式页面**：[Paper](https://aclanthology.org/2023.blackboxnlp-1.22)
-- **领域标签**：Evaluation, Lens, Hallucination, LLM, Layer, Evaluate
-- **本地 PDF 文本规模**：约 6,735 个词
+LLM bias 不是一个单一分数，可能来自 embedding、attention、MLP、layer 和生成解码。论文用 open-ended prompts、gender/age/disability/sexual-orientation 等维度分析 bias，并将影响分解到 Transformer 层与 attention block。
 
-## 1. Abstract 讲解
+## Baseline 与对比
 
-- **研究问题**：模型可能记忆敏感信息或表现出偏置，研究需要识别风险来源并评估干预是否会损伤效用。
-- **摘要主线**：解决大模型行为复杂、内部决策依据难以被人类理解的问题。。方法上以Evaluation为主线，结合论文摘要中的核心设定：Large language models (LLMs) like GPT and PALM have excelled in numerous natural language processing (NLP) tasks such as text generation, question answering, and translation.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+比较 OPT、LLaMA 等模型、不同 bias metric 和 debiasing 方法；以 gender-pair direction、PANDA 数据集、LoRA/weight editing 等设置观察 bias score 与 downstream task 的变化。
 
-## 2. Introduction 讲解
+## Findings
 
-- **引言结构**：1 Introduction；2 Related Work tion, with one prevailing method being the aug-；3 Experimental Setup ing prompts exclusively for predicting subsequent；2022. An empirical survey of the effectiveness of；1424. Pei Zhou, Weijia Shi, Jieyu Zhao, Kuan-Hao Huang,；2019 Conference on Empirical Methods in Natu-
-- **引言关键线索**：bias in pretrained LLMs. Interpretability in LLMs Motivation: Large Language Models (LLMs) have has gained significant attention due to the implica- risen to prominence, revolutionizing the field of tions of understanding and explaining model deci- natural language processing (NLP). These models, sions. Prior research has leveraged techniques such such as OPT (Zhang et al., 2022) and LLaMA (Tou- as attention visualization (Vaswani et al., 2017), vron et al., 2023a), are trained on vast and diverse LIME (Ribeiro et al., 2016), and SHAP (Lund- data sources encompassing webpages, Wikipedia, berg and Lee, 2017) to uncover feature significance. books, scientific papers, and other online content. Integrated Gradients, introduced by Sundararajan While this broad spectrum of data ensures a rich et al. (2017), offers insights into how deep learning representation of the world鈥檚 knowledge, it also
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+不同 bias metric 对同一个 debiasing method 的判断可能不一致；分数下降不一定代表真正无偏。bias 可能集中在特定层或模块，编辑后也可能转移到其他行为。论文强调要同时看 bias、任务性能和模型内部变化。
 
-## 3. Method / Framework 讲解
+## 局限
 
-- **方法段落线索**：investigate how biases are linked to different have been proposed and implemented to mitigate transformer layers using a method called Logit biases in LLMs. Nevertheless, many of the exist- Lens. Specifically, we evaluate three modern ing studies have examined and evaluated biases in LLMs: OPT, LLaMA, and LLaMA2, and their LLMs in a more coarse-grained manner, and it is debiased versions. Our experiments are based on two popular bias evaluation datasets, Stere- unclear how the debiasing techniques affected the oSet and CrowS-Pairs, and we perform a layer- LLMs in deeper neural layers. by-layer analysis using the Logit Lens. We aim to address this research gap by con- ducting an in-depth analysis to interpret layer-wise
-- **方法与解释性关系**：该论文主要围绕 `Evaluation, Lens, Hallucination, LLM, Layer, Evaluate` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+开放式 generation 对 prompt 很敏感，bias score 50 也不能解释为“无偏”。社会偏见评测需要多群体、交叉身份和人工审计。
 
-## 4. Baseline 与对比讲解
-
-- **检测到的 baseline / comparison 关键词**：正文中存在 baseline/comparison 讨论，但文本提取未稳定识别名称。
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - scores are mainly for comparison purposes. It鈥檚 predictions by promoting concepts in the vocabulary
-
-## 5. Experiments 与 Findings 讲解
-
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - Motivation: Large Language Models (LLMs) have has gained significant attention due to the implica-
-  - matrices, significant parameter savings can be Figure 3 and Figure 2, respectively. Our observa-
-  - specific words changes layer by layer. is less significant than that of the LLaMA models.
-  - sponding debiased version (blue). 5 Discussion and Conclusion
-  - words preceding [BLANK]. Table 5 offers sample measures. Our results reveal that different layers
-  - significantly influenced by the way prompts are differences.
-
-## 6. Conclusion、局限与可复现性
-
-- **结论段落线索**：Since the advent of LLMs, numerous studies have aimed to decode their operations, exploring ques- after debiasing (e.g., OPT鈥檚 scores on gender, age, tions like where they store factual information, how and disability, and LLaMA-2_7b鈥檚 scores on sexual they learn from context, and more recently, their orientation). safety. However, while many investigations have delved into the outputs of these models, few have The ss values derived from the OGB dataset are examined the evolution of their behavior within the presented in Table 4. Post-debiasing, the changes neuron layers. in bias scores here are relatively mild. Only the In our research, we delve into the individual lay- LLaMA-2_7b model achieves scores nearing parity ers of LLMs to understand their potential for bias. for female-dominated professions. We assess several current models layer-by-layer us- To discern the alterations in the models鈥 gener- ing widely recognized datasets. Through a detailed ation behaviors, we use contexts f
-- **局限/未来工作线索**：Owing to resource limitations, we load these；Limitations Maarten Bosma, Gaurav Mishra, Adam Roberts,；We鈥檇 like to address certain limitations of our study Sebastian Gehrmann, et al. 2022. Palm: Scaling；GB of RAM. This limitation prevented us from
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
-
-## 7. 一句话定位
-
-这篇论文把“Layered Bias: Interpreting Bias in Pretrained Large Language Models”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：论文将 bias 从单一输出现象拆成 layered mechanism，并提醒 debiasing 结果必须跨指标核验。
