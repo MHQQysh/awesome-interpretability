@@ -1,59 +1,39 @@
 # 023. The Probabilities Also Matter: A More Faithful Metric for Faithfulness of Free-Text Explanations in Large Language Models
 
-> 逐篇阅读记录：第 23 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：Noah Siegel, Oana-Maria Camburu, Nicolas Heess, Marisa Pérez-Ortiz；ACL 2024
+- **论文**：[ACL Anthology](https://aclanthology.org/2024.acl-short.49/)
+- **任务**：评价 free-text explanation 的 faithfulness，改进只看 top-1 标签变化的指标
 
-## 0. 论文信息
+## 1. Introduction
 
-- **作者**：Noah Siegel, Oana-Maria Camburu, Nicolas Heess, María Pérez‐Ortiz
-- **发表 venue / date**：ACL / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.acl-short.49)
-- **领域标签**：Rationale, Reasoning, Hallucination, Behavior, Evaluate
-- **本地 PDF 文本规模**：约 13,019 个词
+如果让 LLM 解释自己的预测，解释可能只是 plausible rationale，并未反映真正的决策过程。常见的 faithfulness 测试会干预解释提到的输入特征，然后看模型 top-1 label 是否改变；作者指出这过于粗糙：概率从 49% 变成 51% 和从 1% 变成 99% 都可能只被记成“label changed”。
 
-## 1. Abstract 讲解
+论文因此把问题限定为：**解释提到的特征是否比未提到的特征更能改变模型的完整预测分布？**
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决大模型推理过程不透明、正确性信号难以从内部状态读出的问题。。方法上以Rationale为主线，结合论文摘要中的核心设定：In order to oversee advanced AI systems, it is important to understand their underlying decision-making process.When prompted, large language models (LLMs) can provide natural language explanations or reasoning traces th
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## 2. Method：概率敏感的 faithfulness metric
 
-## 2. Introduction 讲解
+- 将 faithfulness 分为 explanatory faithfulness 和 causal faithfulness。
+- 对 rationale 提到/未提到的输入特征做 intervention。
+- 不仅记录 top-1 label 是否变化，还记录干预前后 class probabilities 的变化幅度。
+- 设计对照，防止空解释和“把整段输入原样复制”获得虚假的高分。
+- 在 e-SNLI、ECQA、ComVE 等任务和不同规模 LLM 上比较解释忠实度。
 
-- **引言结构**：1 Introduction；2 Related Work；1. It does not test whether impactful features are；3. An explanation mention measure: a function vention, so that TVD measures the absolute change；4 Experiments to predicted classes, which we use for computing；5 Results；2022. Selection-inference: Exploiting large language；2023. The alignment problem from a deep learning
-- **引言关键线索**：In many applications of ML systems it is important 4. We run experiments with the Llama2 family to understand why the system came to a particular of LLMs on three datasets and demonstrate answer (Rudin, 2018), and the field of explainable that CCT captures faithfulness trends that the AI attempts to provide this understanding. How- existing faithfulness metric used in CT misses. ever, relying on subjective human assessment of ex-
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 3. Baseline 与指标问题
 
-## 3. Method / Framework 讲解
+- 传统 label-based causal metric：只看 top-1 prediction 是否变化。
+- 空解释 baseline：如果指标设计不当，空解释可能被判为极端不忠实，但不能说明非空解释哪些部分真正重要。
+- 全输入复制 baseline：重复所有 token 会包含真实重要特征，因此会人为获得高 faithfulness；作者用它说明“覆盖率”和“因果相关性”需要分开。
+- 模型规模对比：Llama2 7B/70B 等，用来检验更强模型是否自动生成更忠实 explanation。
 
-- **方法段落线索**：planations ), free-text (also called natural language 鈥渆xplainability鈥 in this work. See Appendix B for explanations or NLEs), and structured. Prior work further discussion. on faithfulness has mostly focused on highlights and NLEs. We chose to focus on NLEs in this work 2.2 The Counterfactual Test because highlight-based explanations are highly re- In order to measure whether an explanation cap- strictive in what they can communicate (Camburu tures the true factors responsible for a model鈥檚 pre- et al., 2021; Wiegreffe et al., 2020), while NLEs diction, we need to know which factors are relevant. allow models to produce justifications that are as However, deep neural networks like LLMs are of- expressive as necessary (e.g. they can mention to ten difficult to interpret (Fan et al., 2020). background knowledge that is not present in the To address this problem, Atanasova et al. (2023) input but that the model made use of for its predic-
-- **方法与解释性关系**：该论文主要围绕 `Rationale, Reasoning, Hallucination, Behavior, Evaluate` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## 4. Findings
 
-## 4. Baseline 与对比讲解
+- 概率级指标能区分仅改变决策边界和真正显著改变模型信念的干预。
+- 大模型不一定自动产生忠实解释；在 e-SNLI 和 ComVE 上，Llama2 70B 的 explanation 更忠实，但任务和数据集差异仍然很大。
+- ECQA 等复杂任务的 free-text explanation 更容易包含多余文本，导致“解释很长”但与模型重要特征的对应较弱。
+- 论文显示 explanatory plausibility 和 causal faithfulness 可以脱钩：人类认为有道理的 explanation 不一定能预测概率变化。
 
-- **检测到的 baseline / comparison 关键词**：正文中存在 baseline/comparison 讨论，但文本提取未稳定识别名称。
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - explanation baseline: empty explanations would yield 100% unfaithfulness, while explanations simply repeating all
+## 5. 重要限制
 
-## 5. Experiments 与 Findings 讲解
+如果 explanation 是在模型做出最终预测后生成，因果 faithfulness 的解释力本身会受到限制；论文讨论了 chain-of-thought 或 selection inference 等结构约束。概率指标也依赖干预方式、tokenization 和模型输出校准，不能把一个分数当成“真实解释率”。
 
-- **可检测的数值信号**：1X, 2 x
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - model鈥檚 predictions. In this work, we introduce nations mention significant factors: we also
-  - Correlational Explanatory Faithfulness (CEF), need to test whether they mention significant
-  - factors more often than insignificant ones.
-  - bel distribution, more accurately reflecting the improves upon prior work by capturing both
-  - the Llama2 family on three NLP tasks. We find Test (CCT), where we instantiate CEF on the
-  - method, and identify ways to improve it.
-  - searched in the literature, which we refer to as We identify two significant drawbacks with the CT:
-
-## 6. Conclusion、局限与可复现性
-
-- **结论段落线索**：tle information about model predictions (Adebayo for an explanation to be 鈥渇aithful鈥. Jacovi and et al., 2018). It is therefore important to clearly Goldberg (2020) survey literature on the term and assess the extent to which explanations inform us define an explanation as faithful insofar as it 鈥渁c- about ML systems, both for current high-stakes curately represents the reasoning process behind applications such as medicine and criminal justice the model鈥檚 prediction鈥. Wiegreffe and Maraso- (Rudin, 2018), as well as potential scenarios involv- vic虂 (2021) review datasets for explainable NLP ing highly general systems (Shah et al., 2022; Ngo and identify three predominant classes of textual 530 Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers), pages 530鈥546 August 11-16, 2024 漏2024 Association for Computational Linguistics explanations: highlights (also called extractive ex- cable to both approaches, we primarily focus on p
-- **局限/未来工作线索**：To quantify the degree of prediction impact in a ple application of our method. Future work could；the model鈥檚 prediction. planations. Future work could apply the CCT to；Limitations jeet Agrawal, Dinesh Khandelwal, Parag Singla, and
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
-
-## 7. 一句话定位
-
-这篇论文把“The Probabilities Also Matter: A More Faithful Metric for Faithfulness of Free-Text Explanations in Large Language Models”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：这篇论文把 faithfulness 从二值 label flip 推进到概率分布变化，更接近模型决策强度，但仍需要严格区分解释生成时点和干预协议。

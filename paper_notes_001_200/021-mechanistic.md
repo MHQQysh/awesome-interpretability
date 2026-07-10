@@ -1,59 +1,40 @@
 # 021. Mechanistic?
 
-> 逐篇阅读记录：第 21 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：Naomi Saphra, Sarah Wiegreffe；BlackboxNLP 2024
+- **论文**：[ACL Anthology](https://aclanthology.org/2024.blackboxnlp-1.30/)
+- **类型**：概念与社群分析；讨论 mechanistic interpretability 术语在 NLP 中的含义漂移
 
-## 0. 论文信息
+## 1. Introduction：为什么“mechanistic”需要被澄清
 
-- **作者**：Naomi Saphra, Sarah Wiegreffe
-- **发表 venue / date**：ACL / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.blackboxnlp-1.30)
-- **领域标签**：Mechanistic, Hidden, LLM, Activation, Analyze
-- **本地 PDF 文本规模**：约 13,586 个词
+Mechanistic interpretability 在语言模型研究中快速流行，但不同论文用它表示的东西并不一致：有的指通过激活和权重解释模型内部，有的特指 circuit-level 因果机制，有的只要研究来自 MI 社群就称为 mechanistic。术语不清会让读者误以为不同论文提供了同等强度的机制证据。
 
-## 1. Abstract 讲解
+## 2. 论文的分析框架
 
-- **研究问题**：模型的知识、能力或行为信号分散在内部表征中，研究需要定位承载信号的神经元、特征、层或电路。
-- **摘要主线**：解决大模型隐藏表征中承载了什么知识、语义或行为信号的问题。。方法上以Mechanistic为主线，结合论文摘要中的核心设定：The rise of the term mechanistic interpretability has accompanied increasing interest in understanding neural models-particularly language models.However, this jargon has also led to a fair amount of confusion.So, what d
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+作者区分四种用法：
 
-## 2. Introduction 讲解
+1. **最窄技术定义**：从模型内部的模块交互和因果电路出发，解释输入到输出的具体计算。
+2. **较宽技术定义**：研究 activation、weight、neuron、layer 等内部对象，但不一定还原完整 circuit。
+3. **文化/社群定义**：由 MI 社群、论坛、workshop 和相关研究传统产生的工作。
+4. **广义 interpretability 标签**：任何研究模型内部或表征的工作都可能被称为 mechanistic。
 
-- **引言结构**：1 Introduction terize subsets of research from the NLPI commu-；1. Narrow technical definition: A technical Mechanistic is just one example of the imprecise；2024. CausalGym: Benchmarking causal inter-；2024. Transcoders find interpretable llm feature cir-；2023. Reliability of CKA as a similarity measure in Yuntao Bai, Anna Chen, Tom Conerly, Dawn Drain,；2020. Neural natural language inference models European Chapter of the Association for Computa-；2024. Measuring progress in dictionary learning；2016. Visualizing and understanding neural models
-- **引言关键线索**：nity, but their work is not always classified as MI, The field of mechanistic interpretability is grow- illustrating the term鈥檚 contextual application. ing dramatically, constantly motivating new work- In order to understand how semantic drift even- shops, forums, and guides. And yet, many are un- tually gave rise to the cultural definitions, we sure what the term mechanistic interpretability en- overview the history of the two distinct commu- tails. Researchers, whether experienced or new to nities (NLPI and MI) (搂3). We describe how a new the field, often ask what makes some interpretabil- movement of AI safety researchers, motivated by ity research 鈥渕echanistic鈥 (Andreas, 2024; Beni- philosophical arguments for the importance of in- ach, 2024; Hanna, 2024; Belinkov et al., 2023). Be- terpretability, differentiated themselves as the MI cause both fields study language models (LMs), the
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 3. Baseline 与比较方式
 
-## 3. Method / Framework 讲解
+这不是实验性能论文，因此 baseline 不是模型分数，而是不同研究传统的对照：
 
-- **方法段落线索**：ity community and the formation of the sepa- the landscape of the interpretability community it- rate, parallel mechanistic interpretability com- munity. Finally, we discuss the broad cultural self in order to clarify the usage of mechanistic definition鈥攅ncompassing the entire field of interpretability. interpretability鈥攁nd why the traditional NLP To that end, we will begin by characterizing the interpretability community has come to em- narrow technical definition (搂2.1) and subsequently brace it. We argue that the polysemy of mecha- explain how the coinage of the term mechanistic nistic is the product of a critical divide within interpretability led inevitably to its broad technical the interpretability community. definition (搂2.2). Both technical definitions charac-
-- **方法与解释性关系**：该论文主要围绕 `Mechanistic, Hidden, LLM, Activation, Analyze` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+- NLP probing、representation analysis、causal mediation 与 MI circuit work 的研究目标不同。
+- probing 能读出信息，但不自动说明信息被模型用于决策；因此不能和完整因果机制等价。
+- 计算机视觉中的 circuit/feature 传统影响了 NLP MI，但语言模态不是简单的图像分类替代品。
+- 论文还提醒 random embedding、结构先验和 probe capacity 都会影响“可解释信息被发现”的结论。
 
-## 4. Baseline 与对比讲解
+## 4. Findings
 
-- **检测到的 baseline / comparison 关键词**：Hewitt and Liang, NLPI direct precedents and, Saxon
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - baselines (Hewitt and Liang, 2019) or informative demonstrating that the language modality was rel-
-  - sign that they were uninterested in MI, many NLPI direct precedents and improved baselines. Saxon
+- “mechanistic”在 NLP 中存在语义漂移，很多工作使用了内部表征分析，却没有给出足够的因果干预来支持狭义机制结论。
+- MI 社群带来了对 circuit、superposition、feature 和 activation patching 的关注，但也形成了独立术语文化，可能与 NLP 原有 interpretability 文献断裂。
+- 作者主张论文应明确说明解释对象、证据强度和因果范围：是发现相关表示，还是证明某个表示对行为必要/充分。
+- 术语争论本身不是重点；重点是让读者能区分“观察到一个相关 feature”和“重建模型计算过程”。
 
-## 5. Experiments 与 Findings 讲解
+## 5. 评价
 
-- **可检测的数值信号**：32x
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - sign that they were uninterested in MI, many NLPI direct precedents and improved baselines. Saxon
-  - interests, such as training dynamics (Olsson et al., 4 Conclusion
-  - representation level, to improve fairness & safety of ArXiv: 2104.07143.
-  - ity a sexier way of saying interpretability?鈥. Tweet. Decoding by contrasting layers improves factuality in
-  - and improve how language models track agreement
-  - 1144. significant contingent of people studying LLMs don鈥檛
+这篇文章的作用类似领域方法论基线。读任何 mechanistic interpretability 论文时，都应问：作者是否做了 intervention？是否有 controls？是否解释了 feature interaction？是否只在一个 prompt/模型上成立？
 
-## 6. Conclusion、局限与可复现性
-
-- **结论段落线索**：2022; Liu et al., 2023; Nanda et al., 2023; Zhong et al., 2023)鈥攖hough the NLPI community has Whatever terminological confusion and ideologi- also studied this topic (Chiang et al., 2020; Saphra cal tension they have brought to the interpretability and Lopez, 2019b; Murty et al., 2023; Chen et al., field, the MI community is also responsible for 2024; Merrill et al., 2023). MI still strongly builds its newfound popularity. The interest, energy, and on the circuit paradigm that operates at the level of opportunities MI brings to the field cannot be un- module interactions (Lieberum et al., 2023; Marks derstated, nor should they be taken for granted. et al., 2024; Merullo et al., 2024; Tigges et al., NLPI and MI researchers alike are motivated by 2024; Hanna et al., 2024; Dunefsky et al., 2024)鈥 social responsibility, intellectual curiosity, and the a framework which also inspires NLPI researchers possibility of improving our tools. However, many (Ferrando et al., 2024; Ferrando and Voit
-- **局限/未来工作线索**：未稳定识别 limitations 小节；需要结合作者讨论和附录核对。
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
-
-## 7. 一句话定位
-
-这篇论文把“Mechanistic?”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：论文不是提出新解释工具，而是要求 mechanistic interpretability 研究把术语、证据和因果主张分开写清楚。

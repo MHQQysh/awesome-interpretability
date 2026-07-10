@@ -1,64 +1,45 @@
 # 025. Mitigating Privacy Seesaw in Large Language Models: Augmented Privacy Neuron Editing via Activation Patching
 
-> 逐篇阅读记录：第 25 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：Xinwei Wu, Weilong Dong, Shaoyang Xu, Deyi Xiong；Findings of ACL 2024
+- **论文**：[ACL Anthology](https://aclanthology.org/2024.findings-acl.315/)
+- **任务**：LLM privacy unlearning；解释和修复 neuron editing 的 privacy seesaw
 
-## 0. 论文信息
+## 1. Introduction：保护一个隐私可能暴露另一个隐私
 
-- **作者**：Xinwei Wu, Weilong Dong, Shaoyang Xu, Deyi Xiong
-- **发表 venue / date**：ACL / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.findings-acl.315)
-- **领域标签**：Mechanistic, Hidden, LLM, Activation, Control
-- **本地 PDF 文本规模**：约 8,057 个词
+神经元级 privacy editing 通常针对一批已知私密样本，抑制承载这些样本的 neurons。但论文发现一个反直觉现象：目标私密文本的泄漏风险下降后，某些未被编辑的 private text 风险反而上升。作者称之为 **Privacy Seesaw**。
 
-## 1. Abstract 讲解
+这暴露了一个关键问题：编辑的目标不是简单地让某些字符串概率下降，而是要在目标隐私、非目标隐私和模型效用之间保持稳定平衡。
 
-- **研究问题**：模型的知识、能力或行为信号分散在内部表征中，研究需要定位承载信号的神经元、特征、层或电路。
-- **摘要主线**：解决大模型隐藏表征中承载了什么知识、语义或行为信号的问题。。方法上以Mechanistic为主线，结合论文摘要中的核心设定：Protecting privacy leakage in large language models remains a paramount challenge.In this paper, we reveal Privacy Seesaw in LLM privacy protection via neuron editing, a phenomenon where measures to secure specific priva
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## 2. Method：APNEAP
 
-## 2. Introduction 讲解
+- **触发因素分析**：目标 privacy data 的数量，以及被编辑 privacy neurons 的数量，是 seesaw 的两个主要 trigger。
+- **Augmented private data**：对已收集的 private samples 生成补充私密数据，扩大编辑覆盖范围，减少“只记住少量目标样本”的过拟合。
+- **Activation patching**：用 activation patching 改进 privacy neuron identification/editing，使编辑更针对承载隐私的内部状态，而不是粗暴屏蔽整个层。
+- **目标**：同时降低 target private data 和 non-target private data 的 leakage，并保持正常任务性能。
 
-- **引言结构**：1 Introduction as ChatGPT with meticulously crafted prompts, un-；3 Preliminary；6 Future Work the computational efficiency of neuron localization；2022. Gpt-neox-20b: An open-source autoregressive Mor Geva, Roei Schuster, Jonathan Berant, and Omer；2022. What does it mean for a language model；2022. Training language models to follow instruc- Conference on Empirical Methods in Natural Lan-
-- **引言关键线索**：derscoring the urgency of privacy protection for Large language models have demonstrated out- LLMs (Li et al., 2023a). standing capabilities in natural language under- In order to protect privacy of LLMs, machine standing and generation, significantly advancing unlearning and neuron-based methods have been downstream natural language processing (NLP) proposed. The former aims to make LLMs for- tasks (Brown et al., 2020; Chung et al., 2022; get targeted datasets through fine-tuning on small Ouyang et al., 2022; Achiam et al., 2023). How- batches of data. Ishibashi and Shimodaira (2023) ever, LLMs trained on vast amounts of Internet render private information harmless through Sani- data encounter critical security and privacy chal- tization Tuning. Jang et al. (2022) reduce privacy lenges in real-life application scenarios (Shen et al., leakage risks by reversely learning the gradient of 2
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 3. Baseline 与对比
 
-## 3. Method / Framework 讲解
+- 传统 privacy neuron editing：只用目标隐私样本做 neuron identification。
+- 不同目标数据量：测试 privacy data 数量是否触发 seesaw。
+- 不同 edited neuron 数量：测试编辑范围扩大后是否造成非目标风险。
+- 与 unlearning、data processing/training/post-processing 方法比较 privacy-utility trade-off。
+- 评价包括目标/非目标文本的 extraction risk、模型效用和编辑稳定性。
 
-- **方法段落线索**：work designed to well balance model perfor- privacy leakage risk of the targeted private data (texts mance with privacy protection. The proposed 1-5), it paradoxically increases the risk for certain non- APNEAP augments collected private data by targeted private data (text 7). automatically synthesizing new private data, which deactivates the first trigger to the privacy seesaw issue. Additionally, it adapts activation data for LLMs often contain sensitive or unautho- patching to privacy neuron editing for switch- rized information, which is subjected to limited ing off the second trigger to the privacy seesaw scrutiny because of its massiveness and confiden- problem. Experimental results show that the proposed APNEAP is capable of alleviating tiality (Piktus et al., 2023; Li et al., 2023a). Second, the privacy seesaw phenomenon and offers a LLMs tend to memorize training data, including more stable and reliable approach to privacy uniq
-- **方法与解释性关系**：该论文主要围绕 `Mechanistic, Hidden, LLM, Activation, Control` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## 4. Findings
 
-## 4. Baseline 与对比讲解
+- 目标文本 1-5 的泄漏风险可以被降低，但未编辑的 text 7 风险上升，直接展示 privacy seesaw。
+- 只增加编辑神经元并不能解决问题，过度编辑可能把隐私信息重新路由到其他表征。
+- APNEAP 通过 augmented data 抑制第一个 trigger，并用 activation-patching based editing 减少第二个 trigger 的副作用。
+- 论文报告 APNEAP 在保护目标隐私的同时，对 non-target private data 更稳定；它不是追求某一条字符串的完全删除，而是降低隐私风险的整体波动。
 
-- **检测到的 baseline / comparison 关键词**：Wu et al, Baselines To evaluate the, Differential Privacy What Causes, Privacy Seesaw, Our investi-, DEPN, In comparison with Table, APNEAP and baselines. The, APNEAP compared to baselines, Due, Table 4, Comparison of performance metrics
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - formance than strong baselines.
-  - tion over strong baselines, while maintaining high alignment of knowledge neurons. Wu et al. (2023)
-  - E. Baselines To evaluate the performance of the of privacy seesaw.
-  - pare with three baselines. Differential Privacy What Causes the Privacy Seesaw? Our investi-
-  - sanitized dataset. DEPN: the baseline of privacy no instances of increased privacy exposure risk
-  - In comparison with Table 2a, these results suggest
+## 5. Ablation 与解释
 
-## 5. Experiments 与 Findings 讲解
+- 不做 data augmentation：seesaw 更明显，说明编辑集合覆盖不足。
+- 不使用 activation patching：privacy neuron 定位不够稳定，容易扩大编辑范围。
+- 改变目标数据量和 neuron 数量：结果支持两个 trigger 的因果作用，而非随机现象。
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - problem. Experimental results show that the
-  - standing and generation, significantly advancing unlearning and neuron-based methods have been
-  - avoid significant impact on the model performance, neuron editing (Wu et al., 2023), fine-tuning on tar-
-  - sents a significant advancement in model editing,
-  - large. In our experiments, we find that an insuffi-
-  - and 90,316 email instances in the Enron dataset, dataset, we find 977 instances with increased leak-
-  - lected 5% the data of Enron and MIMIC as the datasets and significantly protect the targeted sub-
+## 6. 局限
 
-## 6. Conclusion、局限与可复现性
+隐私泄漏评估受攻击 prompt、抽取策略和 private corpus 影响；activation patching 本身也可能造成 utility loss。真实部署需要考虑未见过的隐私类型、不同语言和多轮攻击。
 
-- **结论段落线索**：lighted the importance of balancing model perfor- In this paper, we have identified the privacy seesaw mance with protection strength (Abadi et al., 2016; phenomenon as a previously underexplored prob- Habernal, 2021). This balance is particularly chal- lem in LLM privacy protection, where efforts to lenging, as demonstrated in works on differential protect certain private data instances inadvertently privacy (Shi et al., 2021; Wu et al., 2022). In post- increase exposure risks for others. We pinpoint the processing privacy protection for large language amount of targeted privacy data and the number models, it鈥檚 impractical to have a complete dataset of privacy neurons being edited as key triggers of of private information. Protecting only a subset of this phenomenon. To tackle this, we proposed AP- private data fails to cover unknown private data, NEAP, effectively balancing model performance leading to a privacy seesaw effect. Future research with privacy protection and significantly
-- **局限/未来工作线索**：data (Text 7). This finding highlights the limitations language models are categorized into three stages:；data, but also from the limitation of DEPN method, require the longest processing time, followed by；6 Future Work the computational efficiency of neuron localization；Limitations Nicholas Carlini, Daphne Ippolito, Matthew Jagielski,
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
-
-## 7. 一句话定位
-
-这篇论文把“Mitigating Privacy Seesaw in Large Language Models: Augmented Privacy Neuron Editing via Activation Patching”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：这篇论文把 privacy editing 从“删掉目标样本”推进到“防止编辑引起风险转移”，并把 seesaw 作为必须报告的副作用指标。
