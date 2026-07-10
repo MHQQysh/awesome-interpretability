@@ -1,60 +1,51 @@
 # 132. Automatic Evaluation of Attribution by Large Language Models
 
-> 逐篇阅读记录：第 132 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Xiang Yue, Boshi Wang, Ziru Chen, Kai Zhang, Yu Su, Huan Sun
+- **Venue:** EMNLP Findings 2023
+- **Paper:** https://aclanthology.org/2023.findings-emnlp.307
+- **Tags:** Attribution, Factuality, Evaluation, LLM-as-a-judge
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Xiang Yue, Boshi Wang, Ziru Chen, Kai Zhang, Yu Su, Huan Sun
-- **发表 venue / date**：EMNLP / 2023/01
-- **正式页面**：[Paper](https://aclanthology.org/2023.findings-emnlp.307)
-- **领域标签**：Attribution, Evaluation, LLM, Behavior, Evaluate
-- **本地 PDF 文本规模**：约 12,878 个词
+带引用的 LLM 会把回答与外部 reference 绑定，但“有引用”不等于“引用支持了回答”。作者引用生成式搜索的人工审计结果：New Bing 和 Perplexity 生成的陈述只有约 52% 能被对应引用完全支持；逐条人工核验又昂贵且慢。已有工作多做 binary entailment，或者把支持程度分成 full / partial / none，无法清晰区分“与证据矛盾”和“证据没有说到”。
 
-## 1. Abstract 讲解
+论文要解决的是一个更细粒度的 attribution evaluation：给定 query、answer、reference，自动判断 answer 是 attributable、extrapolatory 还是 contradictory，并比较 prompt LLM 与小模型微调两种可扩展方案。
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Attribution为主线，结合论文摘要中的核心设定：A recent focus of large language model (LLM) development, as exemplified by generative search engines, is to incorporate external references to generate and support its claims.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## Method / Framework
 
-## 2. Introduction 讲解
+### 任务定义
 
-- **引言结构**：1 Introduction ods to automatically evaluate attribution and iden-；6 Related Work manner: 1) we explore how helpful other relevant；8 Limitations Acknowledgements
-- **引言关键线索**：Generative large language models (LLMs) (Brown tify potential attribution errors are highly desired. et al., 2020; Ouyang et al., 2022; Chowdhery et al., Towards this goal, we take the first step by intro- 2022; OpenAI, 2023a,b, inter alia) often struggle ducing AttrScore (Figure 1), a framework designed with producing factually accurate statements, re- for automatic evaluation of attribution and identi- sulting in hallucinations (Ji et al., 2023). Recent fication of specific types of attribution errors. We efforts aim to alleviate this issue by augmenting propose a new problem formulation that catego- LLMs with external tools (Schick et al., 2023) such rizes attribution into three types: 1) attributable: as retrievers (Shuster et al., 2021; Borgeaud et al., the reference fully supports the generated state- 2022) and search engines (Nakano et al., 2021; ment; 2) extrapolatory: the refere
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+- **Attributable:** reference 完全支持回答。
+- **Extrapolatory:** reference 相关但信息不足，无法验证回答中的全部内容。
+- **Contradictory:** 回答与 reference 明确冲突。
 
-## 3. Method / Framework 讲解
+### AttrScore 两条实现路线
 
-- **方法段落线索**：automatic evaluation: prompting LLMs and to make harmful health decisions. Similarly, in fine-tuning smaller LMs. The fine-tuning data finance, faulty investment advice attributed to a re- is repurposed from related tasks such as ques- liable source may cause substantial financial losses. tion answering, fact-checking, natural language inference, and summarization. We manually cu- To identify attribution errors, existing attributed rate a set of test examples covering 12 domains LLMs (Nakano et al., 2021; Thoppilan et al., 2022) from a generative search engine, New Bing. rely heavily on human evaluation, which is both Our results on this curated test set and simu- expensive and time-consuming. For instance, the lated examples from existing benchmarks high- average cost of annotating a single (query, answer, light both promising signals and challenges. reference) example is about $1 in Liu et al. (2023). We hope our problem formulation, 
-- **方法与解释性关系**：该论文主要围绕 `Attribution, Evaluation, LLM, Behavior, Evaluate` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+1. **Prompting LLM。** 给 ChatGPT 或 GPT-4 明确的三分类定义和 query-answer-reference 三元组，要求输出标签及解释；零样本和 few-shot 都测试。
+2. **Fine-tuning smaller LMs。** 从 fact-checking、NLI、summarization 和 QA 数据重用或模拟训练数据，再微调 RoBERTa、FLAN-T5、GPT-2、LLaMA、Alpaca、Vicuna 等不同规模模型。QA 数据被改造成更接近真实 attribution 的样本，以减少只在 NLI 形式上训练的问题。
 
-## 4. Baseline 与对比讲解
+评测集一部分来自已有任务模拟数据，另一部分是从 New Bing 真实生成搜索交互中人工整理、覆盖 12 个领域的 AttrEval-GenSearch。指标使用三类各自 F1 和 micro-F1；micro-F1 在这里等价于总体 accuracy。
 
-- **检测到的 baseline / comparison 关键词**：正文中存在 baseline/comparison 讨论，但文本提取未稳定识别名称。
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - 鈥減artial鈥, or 鈥渘o support鈥, our fine-grained error mation comparisons, such as overlooking contex-
+## Baselines / Comparisons
 
-## 5. Experiments 与 Findings 讲解
+论文没有把一个 NLI 模型作为唯一 baseline，而是比较：zero-shot / few-shot prompting 的 GPT-4、ChatGPT、Alpaca；只用某一种相关任务数据微调；把 QA、NLI、fact-checking、summarization 组合起来微调；以及不同大小的 RoBERTa、FLAN-T5、GPT-2、LLaMA、Alpaca、Vicuna。这样能区分模型规模、提示格式和训练任务来源三种因素。
 
-- **可检测的数值信号**：31%, 81%, 50
- Percentage
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - In this paper, we investigate automatic evalu- thiness of LLMs, introducing significant safety
-  - Our results on this curated test set and simu- expensive and time-consuming. For instance, the
-  - ment directly contradicts the cited reference. Un- Our results indicate that both approaches show
-  - Liu et al. (2023) that defines the degree of refer- further improvement. Major sources of evaluation
-  - to a user鈥檚 query. Our task setting prioritizes one and system improvement.
-  - GenSearch sets. The best-performing result in each setting is in bold. The results show both promising signals and
-  - four types of LMs of various scales: Roberta and significantly outperforming other models. This
+## Experiments / Findings
 
-## 6. Conclusion、局限与可复现性
+- GPT-4 在真实 New Bing 集上达到约 81% 到 83% 总体 accuracy，明显优于其它 prompting 模型，但作者明确认为距离生产环境可直接替代人工仍有差距。
+- 小模型微调效果提升很大：Vicuna 13B 的 accuracy 在模拟集 / GenSearch 集从 zero-shot 的 34.6% / 41.4% 提升到 66.0% / 71.3%；FLAN-T5 770M 微调后甚至可以超过 ChatGPT。
+- 真实集与模拟集的相对排名并不总一致，说明只在合成分布上优化会损害跨域泛化。
+- 最难的是 contradictory。模型经常把回答中的数字、日期或因果关系与 reference 的冲突忽略掉，反而依赖自身参数知识，把它误判为 attributable。
+- GPT-4 的错误分析中，30.6% 属于对细粒度信息不敏感，例如把 “131,930” 和 reference 中 “132,147” 当成可接受近似；22.2% 是误解标签定义和逻辑关系；13.9% 涉及等号、约等号等符号运算。
 
-- **结论段落线索**：on researchers, e.g., 鈥淚s XX a co-author of the paper XX?鈥 https://github.com/lm-sys/FastChat 4619 AttrEval-Simulation AttrEval-GenSearch Setting Model (Size) Attri. Contra. Extra. Overall Attr. Contra. Extra. Overall Alpaca (7B) 50.0 4.0 1.4 33.6 50.7 8.6 3.6 34.3 Alpaca (13B) 48.3 5.6 2.2 33.5 50.6 6.1 19.3 34.7 Zero-shot Vicuna (13B) 46.3 8.3 21.6 34.6 54.4 13.3 26.1 41.4 ChatGPT 45.7 17.9 52.7 43.2 61.2 20.6 53.3 55.0 GPT-4 58.7 23.2 61.5 55.6 87.3 45.0 89.6 85.1 Alpaca (7B) 45.4 8.2 9.6 31.9 49.6 5.2 13.5 37.2 Alpaca (13B) 38.9 20.1 2.2 33.1 50.5 10.3 5.6 34.8 Few-shot Vicuna (13B) 35.4 37.2 0.3 32.6 50.6 9.1 8.4 34.1 ChatGPT 46.6 27.6 35.8 39.2 62.6 26.8 49.5 53.3 GPT-4 61.1 31.3 68.8 60.0 85.2 53.3 88.9 84.3 Roberta (330M) 62.5 54.6 74.7 65.0 47.2 25.2 62.3 49.8 GPT2 (1.5B) 63.6 54.6 71.9 63.5 51.1 18.6 60.7 47.4 T5 (770M) 45.9 57.1 71.6 59.1 58.5 24.3 72.5 61.6 Flan-T5 (770M) 57.3 50.1 70.5 59.3 64.3 27.6 72.9 64.5 Flan-T5 (3B) 48.1 48.7 67.1 55.7 77.7 44.4 80.0 75.2 Fine-tuned
-- **局限/未来工作线索**：language inference (NLI), and summarization. For potential directions for future work, we hope our；A100 80GB GPUs with a maximum of 512 tokens. of bias (see Limitations Section 8).；8 Limitations Acknowledgements；While acknowledging current limitations, sev- ral Language Processing and the 9th International
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## Ablation / Error Analysis
 
-## 7. 一句话定位
+任务来源消融显示，QA 和 fact-checking 数据对 attribution 最有帮助；组合多个相关任务总体更好，尤其改善 GenSearch 的 out-of-domain 测试。Prompt 消融比较 attribution、NLI、fact-checking、summarization 四种提示：fact-checking 和 NLI 提示通常优于专门 attribution 以外的简单提示，可能因为模型在指令微调阶段见过相似任务。一个重要的负结果是，增加示例不等于稳定提升，prompt 选择本身会改变零样本和 few-shot 的分数。
 
-这篇论文把“Automatic Evaluation of Attribution by Large Language Models”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+## Limitations
+
+模拟训练数据和真实搜索错误的分布仍有差异，可能包含噪声、过于简单的错误模式和错误标签。小模型处理长 reference、数字比较和复杂逻辑的能力有限；GPT-4 虽然强，仍有成本、偏差和不可控性问题。三分类把每个 statement 配一个 reference，尚未覆盖多引用、多句答案和引用片段之间的跨句推理。
+
+## 两句话总结
+
+AttrScore 将引用核验从“是否被支持”细化为支持、证据不足和矛盾三类，并用真实生成式搜索数据检验 prompt judge 与小模型微调。结果表明 GPT-4 和任务迁移微调都有可用信号，但数字、逻辑和真正的 contradiction 仍是自动引用评估的主要瓶颈。

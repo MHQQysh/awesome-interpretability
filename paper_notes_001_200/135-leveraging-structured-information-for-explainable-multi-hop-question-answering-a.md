@@ -1,60 +1,47 @@
 # 135. Leveraging Structured Information for Explainable Multi-hop Question Answering and Reasoning
 
-> 逐篇阅读记录：第 135 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Ruosen Li, Xinya Du
+- **Venue:** EMNLP Findings 2023
+- **Paper:** https://aclanthology.org/2023.findings-emnlp.452
+- **Tags:** Explainable QA, Multi-hop Reasoning, Semantic Graph, Faithfulness
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Ruosen Li, Xinya Du
-- **发表 venue / date**：EMNLP / 2023/01
-- **正式页面**：[Paper](https://aclanthology.org/2023.findings-emnlp.452)
-- **领域标签**：Attribution, Rationale, Evaluation, Reasoning, Hallucination, Behavior, Detect
-- **本地 PDF 文本规模**：约 7,056 个词
+Multi-hop QA 需要把分散在多段文档中的实体和关系组合起来。CoT 让 LLM 输出自然语言 reasoning chain，提升了可读性和一定的准确率，但它仍是端到端生成：模型可能多跳、跳错、编造不存在的中间事实，生成的解释也可能只是事后合理化。传统 graph-based QA 的图通常只记录实体连接，不保留细粒度语义关系。
 
-## 1. Abstract 讲解
+论文提出的问题是：能否先从文档抽取有关系标签的 semantic graph，再把它作为 prompt 中的显式结构，约束 LLM 的推理路径，并让解释直接落到输入文本？
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决大模型幻觉或事实性错误难以定位、解释和诊断的问题。。方法上以Attribution为主线，结合论文摘要中的核心设定：Neural models, including large language models (LLMs), achieve superior performance on multi-hop question-answering.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## Method / Framework
 
-## 2. Introduction 讲解
+方法叫 SG prompting，流程为：
 
-- **引言结构**：1 Introduction；5 Further Qualitative Analysis；2023. Decomposed prompting: A modular approach；2011. Identifying relations for open information ex- the 2016 Conference on Empirical Methods in Natu-
-- **引言关键线索**：way, which is not a strict 鈥渟ymbolic derivation鈥 Multi-hop question answering (QA) involves an- and often causes inaccurate reasoning (e.g., gener- swering questions that require reasoning over mul- ating answers that don鈥檛 exist or two-hops away). tiple pieces of information, often spread across dif- Instead, we propose a multi-step approach (Fig- ferent parts of a document or multiple documents. ure 1) to tackle this problem: firstly, constructing It looks like 鈥渉opping鈥 over various facts to arrive the semantic graph structures (SG) with informa- at a conclusion or answer. In multi-hop question tion extraction (IE) and then leveraging this sym- answering, the system needs to understand the con- bolic information (including entities and semantic text, maintain the sequence of information, and relations) for strictly guiding the model鈥檚 reasoning utilize this combined information to gen
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+1. 用 LLM 做信息抽取，把文档转成三元组，如（Anne, daughter of, Jean）、（Jean, youngest child of, Robert）。
+2. 将多个文档中的实体、关系和事件组成 semantic graph；边带有语义关系，而不只是无标签连接。
+3. 对图做 sequentialization，把三元组拼成 prompt；SG-One 只保留与问题相关的图，SG-Multi 使用多个候选文档的结构，G-Full 则提供更密集的全实体关系。
+4. LLM 在结构化输入上生成答案与 reasoning chain。方法不需要针对 QA 任务额外 fine-tuning，直接使用 GPT-3.5 的 in-context learning。
 
-## 3. Method / Framework 讲解
+解释由两部分构成：结构图本身是从上下文抽出的 grounded explanation，生成的 chain 则是模型在图上导航后的自然语言表达。作者因此同时评价答案准确率、chain faithfulness 和人类偏好。
 
-- **方法段落线索**：more faithful reasoning chains and substantially multi-hop reasoning. improves the QA performance on two bench- Despite the progress made, several challenges mark datasets. Moreover, the extracted struc- tures themselves naturally provide grounded persist under this paradigm, One is the neural mod- explanations that are preferred by humans, as els鈥 limitations in tackling compositional problems compared to the generated reasoning chains that require strict multi-hop reasoning to derive and saliency-based explanations.1 correct answers (Dziri et al., 2023). CoT-based methods still conduct generations in an end-to-end
-- **方法与解释性关系**：该论文主要围绕 `Attribution, Rationale, Evaluation, Reasoning, Hallucination, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## Baselines / Comparisons
 
-## 4. Baseline 与对比讲解
+CoT setting 下比较 Base prompt、G-Full、SG-One、SG-Multi；few-shot setting 也比较 Base、G-Full、SG-Multi。数据集是 HotpotQA 和 2WikiMultiHopQA，每题提供 10 个候选段落。指标包括 EM、F1、precision、recall；reasoning chain 另外比较人工判断、ROUGE-1/2/L 和 BERTScore。
 
-- **检测到的 baseline / comparison 关键词**：The, After manual analysis and, Askell, Language models are few-shot
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - changes line. The 鈥渢emperature鈥 parameter is set settings. After manual analysis and comparisons
-  - bachelor鈥檚 degrees) to make pairwise comparisons Askell, et al. 2020. Language models are few-shot
+## Experiments / Findings
 
-## 5. Experiments 与 Findings 讲解
+- HotpotQA 上，加入结构图总体提高四项 QA 指标，SG-Multi 的 recall 比 base prompt 提高约 4%。G-Full 有时反而降低 recall，因为全实体关系带入 spurious information，图太长后还会触发 context limit。
+- 2WikiMultiHopQA 上，加入图后 EM、F1、precision 平均提升约 9%、6%、6%。作者认为 recall 更适合生成式 QA，因为模型生成的正确答案可能比 gold span 更长，precision / EM 会惩罚额外但合理的信息。
+- 100 个 2WikiMultiHopQA 样本的人工 chain 评测中，Base、G-Full、SG-Multi 的 human faithfulness / quality 分别为 0.81、0.87、0.88；SG-Multi 的 ROUGE-1/2/L 为 0.689/0.543/0.628，略高于其它 prompt。
+- 结构图帮助模型在正确答案处停止，减少 over-reasoning；同时让模型更容易知道某个关系不在证据中，而不是继续编造。
+- 人工 pairwise 评测显示，参与者明显偏好 SG-based graph explanation，而不是纯 NLG chain 或 saliency explanation，因为图中的节点和边能直接回溯到输入。
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - improves the QA performance on two bench-
-  - at a conclusion or answer. In multi-hop question tion extraction (IE) and then leveraging this sym-
-  - to generate the reasoning chain and answer. The semantic structures help improve question answering.
-  - more faithful reasoning chains; (3) We show that In addition, under our prompting-based QA set-
-  - to context and help improve the interpretability of the triples, which simplifies the process of encod-
-  - significantly improves the reasoning ability of soning. We tackle the task with in-context learning
-  - improve the performance of the CoT strategy.
+## Ablation / Error Analysis
 
-## 6. Conclusion、局限与可复现性
+SG-One 与 SG-Multi 的差别体现了图大小和相关性的重要性：更小、更聚焦的图通常比 G-Full 更 faithful。ROUGE 与人工 faithfulness 的 Spearman 相关约 0.32，BERTScore 约 0.24，说明自动指标只能提供中等程度的近似。错误主要来自外部常识不足、图抽取不完整、隐喻或 paraphrase 关系、以及约 5% 的不可回答问题；还有约 3/100 样本因为 LLM 输出长度限制导致图缺信息。
 
-- **结论段落线索**：answering, the system needs to understand the con- bolic information (including entities and semantic text, maintain the sequence of information, and relations) for strictly guiding the model鈥檚 reasoning utilize this combined information to generate a cor- process. rect and comprehensive answer. Traditionally, re- The second challenge is that, although the cur- searchers (Qiu et al., 2019; Tu et al., 2019; Fang rent model-generated reasoning chain provides ex- 1 Code is available at https://github.com/ planations, they are only surface-level interpreta- bcdnlp/Structure-QA. tions, and there is no guarantee that they are fully 6779 Findings of the Association for Computational Linguistics: EMNLP 2023, pages 6779鈥6789 December 6-10, 2023 漏2023 Association for Computational Linguistics Model Input Model Input Documents: Documents: Wikipedia Title: Anne Wikipedia Title: Anne Anne loves ... . She was the daughter of Jean ... Anne loves ... . She was the daughter of Jean ... Information Anne
-- **局限/未来工作线索**：explanations that are preferred by humans, as els鈥 limitations in tackling compositional problems；Then the output part would be like below: ber limitation generating the reasoning chain and；Gr盲felfing, Upper Bavaria 鈥 8 June 1991 in length limitation of the LLM. Thus the informa-；Wikipedia Title: Princess Anne of Orl茅ans Limitations
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## Limitations
 
-## 7. 一句话定位
+额外的 IE 抽取步骤增加推理时间和 API 成本。图质量依赖 LLM 的抽取能力和 context window，漏掉一个关键三元组会同时损害答案和解释。把图序列化为文本仍可能超过上下文窗口，也没有真正执行符号推理；系统只能约束 prompt，不能保证生成 chain 每一步都忠实于图。
 
-这篇论文把“Leveraging Structured Information for Explainable Multi-hop Question Answering and Reasoning”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+## 两句话总结
+
+论文用带语义关系的结构图把 multi-hop QA 的推理从纯文本生成转成“从证据图中导航”，并让图本身成为 grounded explanation。HotpotQA、2WikiMultiHopQA 和人工评测显示 SG-Multi 提高了答案与 chain faithfulness，但图抽取错误、长度和额外成本仍是主要瓶颈。

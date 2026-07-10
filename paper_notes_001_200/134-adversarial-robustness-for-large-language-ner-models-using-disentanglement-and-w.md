@@ -1,64 +1,45 @@
-# 134. Adversarial Robustness for Large Language NER models using Disentanglement and Word Attributions
+# 134. Adversarial Robustness for Large Language NER Models using Disentanglement and Word Attributions
 
-> 逐篇阅读记录：第 134 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **Authors:** Xiaomeng Jin, Bhanukiran Vinzamuri, Sriram Venkatapathy, Heng Ji, Pradeep Natarajan
+- **Venue:** EMNLP Findings 2023
+- **Paper:** https://aclanthology.org/2023.findings-emnlp.830
+- **Tags:** Adversarial Robustness, NER, Disentanglement, Integrated Gradients
 
-## 0. 论文信息
+## Introduction
 
-- **作者**：Xiaomeng Jin, Bhanukiran Vinzamuri, Sriram Venkatapathy, Heng Ji, Pradeep Natarajan
-- **发表 venue / date**：EMNLP / 2023/01
-- **正式页面**：[Paper](https://aclanthology.org/2023.findings-emnlp.830)
-- **领域标签**：Attribution, Representation, Evaluation, LLM, Behavior, Analyze
-- **本地 PDF 文本规模**：约 9,326 个词
+LLM 在复杂 NER 上并不稳定，轻微词级修改也可能造成严重性能下降；已有攻击通常偏向替换非实体词，搜索空间有限，而且不少攻击样本虽然让标签翻转，却与原句语义不相似。作者要同时解决“攻击有效”和“语义保持”两个目标，并进一步用生成的攻击样本做 adversarial training，提高 NER 模型的鲁棒性。
 
-## 1. Abstract 讲解
+论文的关键解释性假设是，NER 模型的表示混合了 entity influence 和 context / non-entity influence。若先把两类因素解耦，再用 word attribution 定位重要词，就能从实体和上下文两个空间更有针对性地生成攻击。
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Attribution为主线，结合论文摘要中的核心设定：Large language models (LLM’s) have been widely used for several applications such as question answering, text classification and clustering.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## Method / Framework
 
-## 2. Introduction 讲解
+1. **Disentanglement。** 编码器得到输入表示后，训练 representation 分离器，使 entity 与 context 成分分别可预测；目标是让后续 attribution 不只偏向非实体词。
+2. **Word attribution。** 使用 Integrated Gradients（IG）计算每个词对 NER 输出的贡献，选择 top-K entity words 和 context words。
+3. **Entity substitution。** 用 Wikidata entity linking 找到同一实体类别的替换项，例如把 Manchester United 换成 Barcelona、Real Madrid 等同类实体。
+4. **Context substitution。** 用 GPT-J 的 infilling language model 在 mask 位置生成 5 个候选词。
+5. **Sentence ranking。** 把候选句与原句送入 Universal Sentence Encoder，按 cosine similarity 保留语义最接近且能诱发标签翻转的样本。
 
-- **引言结构**：1 Introduction 2), making it more congenial for a word attribution；2 Related Work；4 Experiments BERT and T5 NER models are provided in the；2020 Conference on Empirical Methods in Natu-
-- **引言关键线索**：function like Integrated Gradients (IG) (Sundarara- Named Entity Recognition (NER) aims to iden- jan et al., 2017) to identify diverse, yet important tify and categorize named entities mentioned in words. The other subsequent steps include substi- unstructured text into pre-defined categories such tution of the selected words with entity and context as Person, Location, or Organization. In recent substitution workflows (Figure 4), and selection years, NER tasks (Malmasi et al., 2022) have be- of candidate adversarial examples based on their come more challenging due to the introduction of semantic similarity scores to the original text. complex tagsets, which often leads to the failure Experimental results indicate that to create a of existing NER systems in accurately recognizing successful attack, on average, our method re- these entities. To address this, Large Language quires 69% (de
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+作者还把实体替换与上下文替换组合，并限制最多修改 1 个或 3 个词，最后用攻击样本训练 BERT NER、T5 instruction NER 和 LLaMA-2-7B NER。
 
-## 3. Method / Framework 讲解
+## Baselines / Comparisons
 
-- **方法段落线索**：score over original LLM NER model by 8% tanglement (Higgins et al., 2017) is a technique and 18% on CoNLL-2003 and Ontonotes 5.0 datasets respectively. which helps in separating the latent entity and con- text components of an embedding space (Figure
-- **方法与解释性关系**：该论文主要围绕 `Attribution, Representation, Evaluation, LLM, Behavior, Analyze` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+攻击 baseline 包括 RockNER（Wikidata 实体替换加随机 mask 上下文）、SeqAttack 框架中的 Bert-Attack、CLARE、DeepWordBug。比较指标是 attack rate、modification rate、文本语义相似度和攻击后的 F1。防御部分在 CoNLL-2003、OntoNotes 5.0、英文 MultiCoNER 上比较 BERT、T5-Large instruction NER 与 LLaMA-2-7B，并报告原始模型与 adversarial training 后的 F1。
 
-## 4. Baseline 与对比讲解
+## Experiments / Findings
 
-- **检测到的 baseline / comparison 关键词**：LLM, Specifically, Baseline Methods, We compare our proposed, BLANK, Then, NER adversarial attack baseline, Basically, An attack is 4.4.1, Comparison against baselines, The total pared to, F1 score
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - tasks in comparison to fine-tuned pre-trained bustness in current LLM鈥檚 with word-level attacks
-  - is clear that in comparison to before disentanglement
-  - model f , an input x 鈭 R , and a baseline input
-  - suzaki, 2021) to generate texts. Specifically, we 4.2 Baseline Methods
-  - mask the context word that needs to be replaced We compare our proposed method with the follow-
-  - with [BLANK]. Then, we take the masked sentence ing NER adversarial attack baseline methods:
+- 在 CoNLL-2003 上，约 22% 的修改率下，方法比 Bert-Attack 高约 10% attack success；相较 DeepWordBug-II，攻击后的 F1 低 8%，attack rate 高 24%。
+- 论文摘要报告，使用生成攻击样本训练后，CoNLL-2003 的 F1 比原始 LLM NER 提高约 8%，OntoNotes 5.0 提高约 18%。在 instruction-fine-tuned T5 的 MultiCoNER 上，攻击可使 F1 下降约 10%，说明 instruction following 并不等于鲁棒。
+- 实体和上下文都参与攻击。只改非实体词会漏掉模型对实体表面形式的依赖；只改实体又无法测试上下文偏差。
+- 在不同数据集上，语义相似度 guardrail 使攻击不再只是 typo 或无关句改写；攻击样本更接近原句语义但仍能翻转 NER 标签。
 
-## 5. Experiments 与 Findings 讲解
+## Ablation / Error Analysis
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - language models (PLM鈥檚). To enhance wider resulting in a significant performance drop of 33%.
-  - results based on our method improves the F1 word attribution techniques, respectively. Disen-
-  - delivering significant performance improvements
-  - sults also demonstrate that our method improves One of the two honorable guests in the school is ......
-  - 鈥 We present end-to-end results of improve-
-  - three benchmark datasets followed by conclusions.
-  - they outperform many NLP tasks and have been tant words using word attributions, (3) Substitution
+IG 与 Kernel-SHAP、attention、weighted linear regression 比较时，IG 在非线性 NER 模型上取得最强攻击效果。去掉 disentanglement 后，重要词选择更偏向单一词类，attack rate 与语义保持同时变差；去掉 USE ranking 会产生更多不自然样本。作者也分别比较实体级、上下文级、实体加上下文的修改预算，发现组合策略更能覆盖模型的决策脆弱点。
 
-## 6. Conclusion、局限与可复现性
+## Limitations
 
-- **结论段落线索**：a simple NER adversarial attack by perturbing both named entities and contexts in the original texts.
-- **局限/未来工作线索**：ues as word importance. (3) Select words using 6 Limitations；a special weighted linear regression to compute One of the key limitations of our work is that we
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+研究主要覆盖 encoder NER、T5 和 LLaMA-2-7B，没有完整探索 decoder-only LLM 的规模效应。方法假设白盒访问模型梯度或表示，并依赖 Wikidata、GPT-J 和 USE，部署成本高于纯黑盒攻击。攻击样本的语义相似度是 embedding 近似，不等于人工判断；此外，实体替换可能改变真实世界事实，应用到生产文本前需要额外安全约束。
 
-## 7. 一句话定位
+## 两句话总结
 
-这篇论文把“Adversarial Robustness for Large Language NER models using Disentanglement and Word Attributions”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+论文把 disentangled representation、Integrated Gradients 和语义相似度结合起来，从实体与上下文两条路径生成更有效且更自然的 NER 对抗样本。实验显示该攻击比 RockNER、SeqAttack 家族更强，并能通过 adversarial training 显著提高多个 NER 模型的 F1，但白盒依赖和模型覆盖范围仍限制了结论。
