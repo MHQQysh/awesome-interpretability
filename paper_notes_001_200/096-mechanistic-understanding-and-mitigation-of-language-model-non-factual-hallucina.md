@@ -1,63 +1,61 @@
 # 096. Mechanistic Understanding and Mitigation of Language Model Non-Factual Hallucinations
 
-> 逐篇阅读记录：第 96 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：Findings of EMNLP 2024。重点是把 hallucination 按内部 fact-recall pipeline 拆成两种机制，再做 targeted restoration。
 
 ## 0. 论文信息
 
-- **作者**：Lei Yu, Meng Cao, Jackie CK Cheung, Yue Dong
-- **发表 venue / date**：EMNLP / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.findings-emnlp.466)
-- **领域标签**：Mechanistic, Representation, Evaluation, Hallucination, Hidden, Layer, Detect
-- **本地 PDF 文本规模**：约 9,144 个词
+- **作者**：Lei Yu, Meng Cao, Jackie Chi Kit Cheung, Yue Dong
+- **来源**：[Findings of EMNLP 2024](https://aclanthology.org/2024.findings-emnlp.466)
+- **代码/数据**：[lm_hallucination_mechanisms](https://github.com/jadeleiyu/lm_hallucination_mechanisms)
+- **模型**：Llama-2、Pythia、GPT-J
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决大模型幻觉或事实性错误难以定位、解释和诊断的问题。。方法上以Mechanistic为主线，结合论文摘要中的核心设定：State-of-the-art language models (LMs) sometimes generate non-factual hallucinations that misalign with world knowledge.To explore the mechanistic causes of these hallucinations, we create diagnostic datasets with subjec
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+非事实 hallucination 可能在模型很自信时出现，外部 uncertainty 或 consistency 检测可以发现一部分风险，却解释不了错误在内部何处形成。若对所有 hallucination 统一做 decoding 控制或全模型 editing，容易损害正常事实能力；作者希望定位“错误类型对应的具体组件”，再只恢复受损的 fact recall path。
 
-## 2. Introduction 讲解
+## 2. Method / Framework：怎么解决
 
-- **引言结构**：3. In the third run, we again provide the model；7 Limitation；2023. Challenges and applications of large language；7) You digest the watermelon seeds
-- **引言关键线索**：Language models (LMs) serve as repositories of et al., 2022a; Geva et al., 2023). However, it re- substantial knowledge (Petroni et al., 2019; Jiang mains unclear whether the results of mechanistic in- et al., 2020; Srivastava et al., 2023) through their terpretability on factual predictions can generalize parametric knowledge gained from pre-training. to hallucinations. Specifically, it is unknown which However, they are susceptible to generating 鈥渉allu- model components deviate from normal function- cinations鈥 that contain factual errors. At the level of ing to cause hallucinations. Localizing the source logit predictions, these hallucinations often display of non-factual hallucination in LMs may help us a pattern similar to factual generations. For exam- design targeted and efficient methods to mitigate ple, LMs have been observed to produce seemingly hallucinations without significan
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+作者从 ParaRel 构造 subject-relation-object cloze diagnostic dataset，将查询分成真实事实、知识错误和答案抽取错误。先用 logit lens 观察中间层逐步解码出的对象，再用 causal mediation/activation patching 测量每层 MLP 与 attention 对最终 hallucination 的 indirect effect。
 
-## 3. Method / Framework 讲解
+### 2.1 两种机制
 
-- **方法段落线索**：trace hallucinations through internal model rep- 2023; Zhang et al., 2023a) treat the LM as a black resentations. We discover two general and box, devising methods based on external features distinct mechanistic causes of hallucinations like predictive uncertainty (Xiao and Wang, 2021; shared across LMs (Llama-2, Pythia, GPT-J): 1) knowledge enrichment hallucinations: in- Varshney et al., 2023) and logical consistency (Co- sufficient subject attribute knowledge in lower hen et al., 2023). These approaches provide little layer MLPs, and 2) answer extraction hallu- insight into the internal mechanisms of factual er- cinations: failure to select the correct object rors and have been shown to be unreliable with attribute in upper layer attention heads. We also often contradictory signals (Turpin et al., 2023). found these two internal mechanistic causes of In contrast, interpretability research, which ex- hallucinations are reflected in ext
-- **方法与解释性关系**：该论文主要围绕 `Mechanistic, Representation, Evaluation, Hallucination, Hidden, Layer, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+1. **Knowledge enrichment hallucination**：subject 本身较陌生，早期/中层 MLP 没有注入足够的 subject attribute knowledge，后续生成的答案常是 nonsensical 或泛化错误。
+2. **Answer extraction hallucination**：模型已有相关对象知识，但中后层 self-attention 没有从 subject-relation 组合中选择正确 object，反而提取了与 subject 更强关联的错误属性。
 
-## 4. Baseline 与对比讲解
+### 2.2 Mechanistic Hallucination Mitigation
 
-- **检测到的 baseline / comparison 关键词**：Baseline Methods. We evaluate, MHM against SFT 34.4, MEND 36.7, LM factual errors, Similarly
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - to baselines 1 . heads, feedforward layers) related to knowledge
-  - Baseline Methods. We evaluate MHM against SFT 34.4 / 86.0 46.0 / 92.3
-  - several baseline methods that have shown promis- MEND 36.7 / 89.2 33.3 / 83.7
-  - contrast, other baselines often yield inferior perfor- tinct mechanisms of LM factual errors: insufficient
-  - on the other hand, the model predicted objects are Similarly, for in-context learning baseline method,
+MHM 根据 hallucination query 与 factual counterpart 的 clean/corrupted activation，恢复与事实 recall pipeline 相关的隐藏表示或模块输出。与全模型 fine-tune 相比，它针对下层 MLP 或上层 attention 的受损路径做选择性 restoration，再在 open-domain QA 上评测 factuality 和 utility。
 
-## 5. Experiments 与 Findings 讲解
+## 3. Baseline / 对比基线
 
-- **可检测的数值信号**：3 times
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - ple, LMs have been observed to produce seemingly hallucinations without significantly impacting util-
-  - fore processing the relation. Similarly, given the the entire vocabulary. In contrast, for a significant
-  - retrieve a significant amount of object information et al., 2020; Meng et al., 2022a), which quantifies
-  - (i.e., we only keep noises that make the model contribute significantly to enrichment hallucina-
-  - the entropy of conditional next-token distribution In practice, we find that LMHM can be combined
-  - cinations are significantly less robust under input
-  - and demonstrate that it can improve LM factuality per token for each candidate answer, and define a
+- **SFT**：用事实数据 fine-tune，代表通用训练式 mitigation。
+- **MEND**：模型 editing baseline。
+- **DoLa**：利用不同层 logits 的 decoding mitigation。
+- **原始 LM**：Llama-2/Pythia/GPT-J 的普通生成。
+- **两类 hallucination 分组**：不是 baseline，而是最关键的机制对照，检验同一种恢复策略是否对两类错误都有效。
 
-## 6. Conclusion、局限与可复现性
+## 4. Experiments / Findings：结果如何读
 
-- **结论段落线索**：effective mitigation results, or achieves a perfor- mance that is comparable to the best mitigation We conducted various interpretability analyses on method. Meanwhile, MHM in most cases pre- non-factual hallucinations made by language mod- serves more than 90% of model performance on els. We show that both lower layer MLPs and upper the specificity evaluation sets, indicating that our layer attention heads in the model factual knowl- mechanistic mitigation of hallucinations does not edge recalling pipeline may operate abnormally compromise LMs鈥 general world knowledge. In during model inference, thereby leading to two dis- contrast, other baselines often yield inferior perfor- tinct mechanisms of LM factual errors: insufficient mance on at least one of the two datasets. In par- knowledge enrichment and ineffective answer ex- ticular, knowledge editing methods such as MEND traction. Leveraging these insights, we proposed an struggles at Truthful QA on which an LM often effective method
-- **局限/未来工作线索**：Our study bears several limitations. Firstly, cer- Kim, James R Glass, and Pengcheng He. 2023. Dola:；ticularly in early layers. Future work should con-
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+logit lens 和 causal tracing 在三个模型上收敛到相同图景：knowledge enrichment 错误在早期/中层 MLP 就缺少有效 subject 信息；answer extraction 错误在中后层 attention 仍无法选中正确 object。两类错误的外部表现也不同：前者通常与未知 subject 相关，后者常是模型对错误 object 已有强关联。
 
-## 7. 一句话定位
+在阈值较严格的 factual query 上，大多数 hallucination 由 answer extraction 主导；模型之间比例不同，GPT-J 的 enrichment hallucination 更多，说明机制分布会随模型/训练而变。因果 patching 显示，把 factual run 的相关中间状态写回 hallucination run 后，错误答案的 log-likelihood ratio 会向真实答案移动，支持定位不是纯相关性。
 
-这篇论文把“Mechanistic Understanding and Mitigation of Language Model Non-Factual Hallucinations”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+MHM 在知识问答上比 SFT、MEND、DoLa 等 baseline 更好地减少 hallucination，同时保持正常事实预测效用；表 2 的结果显示针对不同机制恢复相应模块优于不区分类型的统一 intervention。这里的主要贡献不是某个固定百分比，而是“类型诊断 -> 组件定位 -> 定向恢复”的可复用流程。
+
+## 5. Ablation / 机制解释
+
+- logit lens vs causal tracing：前者看表示中何时出现错误，后者检验改动该表示是否真的影响输出。
+- 低层 MLP restoration vs 上层 attention restoration：分别对应 enrichment 与 extraction，验证机制-干预匹配。
+- MHM vs SFT/MEND/DoLa：比较选择性内部恢复与通用 mitigation 的准确率-副作用权衡。
+- 多模型 replication：Llama-2、Pythia、GPT-J 验证两类机制不是单一架构 artifact。
+
+## 6. Limitations / 局限与复现注意
+
+- ParaRel 是 cloze factual knowledge，不能覆盖长文本、对话、工具使用或多跳生成 hallucination。
+- causal tracing 的 corruption、patch layer、目标 token 和归一化会影响组件排名。
+- MHM 需要 factual counterpart 或可构造的 clean state，真实未知事实场景不一定可用。
+- “减少 hallucination”与“模型真正知道事实”仍需外部知识和更广泛任务验证。
+
+## 7. 两句话总结
+
+论文把非事实 hallucination 分成下层 MLP 缺少 subject knowledge 的 enrichment error 和上层 attention 选错 object 的 extraction error。它用 logit lens 与 causal tracing 定位两条内部路径，再做类型匹配的 targeted restoration，整体优于 SFT、MEND 和 DoLa，但诊断数据主要是 cloze factual queries。

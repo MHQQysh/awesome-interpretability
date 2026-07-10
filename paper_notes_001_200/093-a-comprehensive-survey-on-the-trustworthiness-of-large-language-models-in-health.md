@@ -1,61 +1,74 @@
 # 093. A Comprehensive Survey on the Trustworthiness of Large Language Models in Healthcare
 
-> 逐篇阅读记录：第 93 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：Findings of EMNLP 2025 survey。本文不是单一方法实验，而是按医疗风险维度梳理数据、模型、任务、评估与缺口。
 
 ## 0. 论文信息
 
-- **作者**：Maha Aljohani, Jun Hou, Sindhura Kommu, Xuan Wang
-- **发表 venue / date**：EMNLP / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.findings-emnlp.356)
-- **领域标签**：Evaluation, Reasoning, Hallucination, Behavior, Detect
-- **本地 PDF 文本规模**：约 14,692 个词
+- **作者**：Manar Aljohani, Jun Hou, Sindhura V. S. S. R. K. 等
+- **来源**：[Findings of EMNLP 2025](https://aclanthology.org/2025.findings-emnlp.356)
+- **范围**：2022--2025 医疗领域 LLM trustworthiness 研究
+- **维度**：truthfulness、privacy、safety、robustness、fairness/bias、explainability
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：研究试图建立模型内部表征、外部行为和可解释结论之间的稳定联系。
-- **摘要主线**：解决大模型推理过程不透明、正确性信号难以从内部状态读出的问题。。方法上以Evaluation为主线，结合论文摘要中的核心设定：The application of large language models (LLMs) in healthcare holds significant promise for enhancing clinical decision-making, medical research, and patient care.However, their integration into real-world clinical setti
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+医疗 LLM 的错误不只是普通 benchmark 分数下降：幻觉、隐私泄露、偏见、不稳定和不可解释都可能直接影响临床决策、患者安全和医疗公平。现有工作分散在不同数据集、模型和 trustworthiness 维度，缺少统一视角来回答“评测了什么风险、用什么证据、离临床部署还有多远”。
 
-## 2. Introduction 讲解
+作者通过系统检索和筛选近年研究，建立医疗 LLM 的任务/数据/模型图谱，并按六个 trustworthiness dimensions 组织方法。survey 的目标是暴露评测碎片化和临床验证不足，而不是给所有模型一个简单总排名。
 
-- **引言结构**：1 Introduction generate accurate, reliable, and unbiased outputs；12 Privacy Privacy；8 Safety；6 Robustness；4 Robustness；0 Explainability；4 Future Directions privacy-preserving training, and scalable evalua-；2022. PubHealthTab: A public health table-based
-- **引言关键线索**：across diverse clinical scenarios while minimizing The application of LLMs in healthcare is advanc- errors, hallucinations, and biases. It also encom- ing rapidly, with the potential to transform clini- passes the model鈥檚 resilience against adversarial cal decision-making, medical research, and patient attacks, ensuring that external manipulations do care. However, incorporating them into healthcare not compromise its integrity. A truly robust LLM systems poses several key challenges that need to in healthcare must demonstrate stability, reliability, be addressed to ensure their reliable and ethical use. and fairness, even when faced with noisy, ambigu- As highlighted in Bi et al. (2024), a major concern ous, or adversarial inputs. Similarly, fairness and is the trustworthiness of AI-enhanced biomedical bias must be addressed to prevent discriminatory 6720 Findings of the Association for
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么组织综述
 
-## 3. Method / Framework 讲解
+### 2.1 数据与任务
 
-- **方法段落线索**：worthiness, the trustworthiness of LLMs in inappropriate treatment recommendations. Ensur- healthcare remains underexplored, lacking a ing that generated information is both accurate systematic review that provides a comprehen- and aligned with verified medical knowledge is sive understanding and future insights. This essential. Additionally, privacy concerns arise survey addresses that gap by providing a com- from the risk of exposing sensitive patient data prehensive review of current methodologies during model training and usage, potentially lead- and solutions aimed at mitigating risks across ing to breaches or violations of regulations such key trust dimensions. We analyze how each as HIPAA (Health Insurance Portability and Ac- dimension affects the reliability and ethical de- ployment of healthcare LLMs, synthesize ongo- countability Act) and GDPR (General Data Pro- ing research efforts, and identify critical gaps tection Regulati
-- **方法与解释性关系**：该论文主要围绕 `Evaluation, Reasoning, Hallucination, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+论文整理了临床问答、医学知识问答、诊断/决策支持、报告生成、摘要、患者沟通、代码/生物医学任务等数据；区分 web-scraped、医学考试、电子健康记录、指南/文献和合成数据。模型覆盖通用 decoder LLM、医疗专用模型、开放与闭源系统。
 
-## 4. Baseline 与对比讲解
+### 2.2 六个维度
 
-- **检测到的 baseline / comparison 关键词**：Table 1, This table provides a, LLMs for healthcare. The, LLMs in medical AI, Table 2, Detailed Comparison of GPT, Models Evaluated for Trust, Healthcare LLMs, Including Model Name
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - Table 1: This table provides a structured comparison of datasets used in studies on trust in LLMs for healthcare. The
-  - comparison highlights how each dataset contributes to the development of trustworthy LLMs in medical AI.
-  - Table 2: Detailed Comparison of GPT Models Evaluated for Trust in Healthcare LLMs, Including Model Name,
+- **Truthfulness**：事实正确、临床知识、幻觉与引用。
+- **Privacy**：训练数据泄露、病人身份、去标识化和成员推断。
+- **Safety**：有害建议、越权、拒答和临床风险。
+- **Robustness**：分布外、对抗提示、拼写/格式、长上下文和数据变化。
+- **Fairness/Bias**：性别、种族、年龄、语言和交叉群体差异。
+- **Explainability**：证据引用、理由、可解释决策和医生可审计性。
 
-## 5. Experiments 与 Findings 讲解
+## 3. Baseline / 对比方式
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - (LLMs) in healthcare holds significant promise across diverse populations, and ensuring strong
-  - tion due to its significant social impact. However, tent of each dataset specifies its composition, while
-  - databases), and inference and reasoning (drawing and improved evidence synthesis.
-  - conclusions, inferring relationships, and predicting Several benchmarks have emerged to quantify
-  - and-effect relationships). module that improves summarization outputs with-
-  - of trustworthiness. ing to improve inherent model truthfulness.
-  - To further reduce hallucinations and improve create a false sense of security, as subtle semantic
+survey 中的 comparison 主要是研究协议层面：通用 LLM vs 医疗专用 LLM，闭源 vs 开源，zero-shot/few-shot vs instruction fine-tuning/RAG，以及不同 trustworthiness 维度的 benchmark。它也对比外部检测器、redaction/DP、adversarial stress test、retrieval grounding、multi-agent debate 和 mechanistic/interpretable methods。
 
-## 6. Conclusion、局限与可复现性
+因此不能把 survey 表格中的 accuracy 直接横向比较：数据、提示、医生评分、自动指标和临床任务往往不同，作者明确指出缺少标准化评价。
 
-- **结论段落线索**：outcomes based on retrieved data). and categorize hallucinations. The Med-HALT benchmark (Pal et al., 2023) evaluates hallucina- Medical Natural Language Inference (Med- tion types using reasoning-based tests (e.g., 鈥淔alse NLI) Med-NLI analyzes the logical relationships Confidence鈥) and memory checks. In multimodal between medical texts. Key tasks include tex- settings, Med-HVL (Yan et al., 2024) distinguishes tual entailment (determining if one statement log- between Object Hallucination and Domain Knowl- ically follows another), contradiction detection edge Hallucination. (identifying conflicting statements), neutral rela- To mitigate hallucinations, post-hoc correction tionship identification (recognizing unrelated state- techniques are gaining traction. MEDAL (Li et al., ments), and causality recognition (inferring cause- 2024) presents a model-agnostic self-correction and-effect relationships). module that improves summarization outputs with- Medical Text Generation (Med-Gen) Med-
-- **局限/未来工作线索**：fact-checking, multi-turn verification, and multi- hurt utility; future work needs fine-grained,；Limitations Evaluations remain fragmented: nar- Chen and Esmaeilzadeh (2024) offer a broader sur-；Limitations Current defenses (e.g., DP, redac- (GLiR), can detect whether individual patient data；Medical LLMs can still produce harmful or Limitations Mitigations often target generic
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 4. Findings：综述得到的主要结论
 
-## 7. 一句话定位
+### 4.1 Truthfulness 与 hallucination
 
-这篇论文把“A Comprehensive Survey on the Trustworthiness of Large Language Models in Healthcare”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+医疗模型即使在医学知识 benchmark 上表现高，也可能在开放式诊断/摘要中编造不存在的事实、引用或患者信息。RAG 和引用能够提高可验证性，但检索内容本身可能过时、冲突或不完整；因此“有 citation”不等于 clinical truthfulness。
+
+### 4.2 Privacy
+
+去标识化、差分隐私和 redaction 能降低泄露风险，但可能损害医疗文本的语义和临床效用。survey 强调需要同时测试 membership inference、prompt extraction 和真实攻击场景，而不是只检查数据中是否出现姓名。
+
+### 4.3 Safety 与 robustness
+
+医疗 LLM 面临危险建议、过度自信、拒答不足、提示注入和分布转移；更大的模型不自动解决这些问题。自动 stress test 和领域安全 benchmark 有进展，但临床真实 workflow 和医生在环验证仍少。
+
+### 4.4 Fairness/bias
+
+数据分布和社会偏差会反映在诊断建议、风险预测和患者沟通中。许多论文只测单一 demographic attribute，交叉群体、公平性与临床 outcome 的关系仍缺少统一协议。
+
+### 4.5 Explainability
+
+解释方法包括 attribution、attention、rationale、citation、检索证据和模型内部分析；但它们可能是 plausible 而非 faithful。survey 把“医生能读懂”与“理由真的驱动了模型”区分开，强调需要 causal/clinical validation。
+
+## 5. Ablation / 机制解释
+
+这篇 survey 的消融不是单模型组件消融，而是跨研究的协议对照：有无 retrieval grounding、有无 instruction fine-tuning、有无 privacy protection、有无 safety alignment，以及不同模型大小/开放程度。它揭示的规律是：一个维度的改进常以另一个维度为代价，例如隐私保护影响效用，强拒答影响可用性，简洁解释可能牺牲证据完整性。
+
+## 6. Limitations / 局限与复现注意
+
+- 文献检索截止时间和关键词会漏掉快速出现的新医疗模型。
+- 不同研究的医生标注、临床任务和数据许可不同，无法合成一个统一 leaderboard。
+- survey 汇总方法但不重新执行每个实验，原论文中的评估偏差会被继承。
+- 医疗部署需要法规、责任、隐私和前瞻性临床试验，不能由离线 NLP 分数替代。
+
+## 7. 两句话总结
+
+这篇 survey 的核心问题是医疗 LLM 的 trustworthiness 不能由准确率单独代表，必须同时审计事实、隐私、安全、鲁棒、公平和解释性。它系统整理 2022--2025 的数据、模型和评估方法，指出当前最大缺口是标准化指标、交叉风险测试和真实临床验证不足。

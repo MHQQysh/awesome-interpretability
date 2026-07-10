@@ -1,64 +1,58 @@
 # 092. Refining Attention for Explainable and Noise-Robust Fact-Checking with Transformers
 
-> 逐篇阅读记录：第 92 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：EMNLP 2025。重点是把 evidence explanation 放回 verifier 的训练回路，而不是训练一个与决策无关的后处理 explainer。
 
 ## 0. 论文信息
 
 - **作者**：Jean-Flavien Bussotti, Paolo Papotti
-- **发表 venue / date**：EMNLP / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.emnlp-main.1295)
-- **领域标签**：Evaluation, Transformer, Behavior, Detect
-- **本地 PDF 文本规模**：约 9,213 个词
+- **来源**：[EMNLP 2025](https://aclanthology.org/2025.emnlp-main.1295)
+- **代码**：[ATTUN](https://github.com/JeFlBu/ATTUN)
+- **数据**：FEVEROUS、AVeriTeC、FM2、SciFact；另有 QA 实验
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决大模型行为复杂、内部决策依据难以被人类理解的问题。。方法上以Evaluation为主线，结合论文摘要中的核心设定：In tasks like question answering and factchecking, models must discern relevant information from extensive corpora in an "openbook" setting.Conventional transformer-based models excel at classifying input data, but (i) o
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+开放域 fact-checking 的 retriever 往往给 verifier 20--40 个 passage，其中既有支持/反驳 claim 的证据，也有同一实体的噪声信息。传统 transformer 能做 Supports/Refutes/NEI 分类，却不保证模型真正使用了可展示的证据；单独训练 evidence ranker、SHAP/LIME 或让 LLM 事后解释，可能解释的是另一个模型的判断。
 
-## 2. Introduction 讲解
+作者提出 ATTUN，直接从 verifier 的 self-attention 计算 evidence usefulness，并用该 usefulness loss 反过来调整 attention。目标同时包括更准确的 claim classification、更抗噪声的证据选择，以及与内部决策一致的解释。
 
-- **引言结构**：1 Introduction puts, which makes it challenging to discern the；2023. Enabling large language models to generate dar Joshi, Danqi Chen, Omer Levy, Mike Lewis,；2024. Faithful attention explainer: Verbalizing de- Elena Voita, David Talbot, Fedor Moiseev, Rico Sen-
-- **引言关键线索**：specific evidence e虃 used for decision-making (Bus- Transformer-based models are pivotal in numerous sotti et al., 2024). Current post-hoc methods, like applications, notably in tasks like fact-checking, SHAP and LIME (Ribeiro et al., 2016; Lundberg which has gained prominence with the rise of so- and Lee, 2017), offer insights into model outputs, cial media platforms (Nakov et al., 2021). In this but are computationally expensive, requiring nu- domain, a claim, denoted as a query q, is examined merous executions. External models attempt to for its truthfulness using supporting evidence e虃 ex- classify context relevance (Atanasova et al., 2020), tracted from a vast corpus. The model processes but often fall short in faithfully representing the this query-evidence pair to produce an output o, model鈥檚 internal decision-making. Using LLMs for categorically labeling the claim as Supports, Re
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+对每个 evidence span，ATTUN 计算各 layer/head 中 evidence token 与整个输入的平均 attention，再除以同一 head 对 claim span 的 reference attention，得到 evidence-specific attention ratio。展平后进入线性 classifier，预测该 evidence 是否有用。
 
-- **方法段落线索**：module that directly modifies attention weights, context e are truly beneficial for decision-making, allowing the model both to improve predictions effectively aiming to expose the e虃 used by the and to identify the most relevant sections of in- model. Human fact-checkers dismiss outputs that put data after supervised training. We validate lack transparency about the evidence supporting our methodology using fact-checking datasets the model鈥檚 decision (Nakov et al., 2021). Ensur- and show promising results in question answer- ing transparency is vital for users, allowing them to ing. Experiments demonstrate improvements of up to 51% in F1 score for detecting relevant verify the evidence and determine their alignment context, and gains of up to 18% in task accuracy with the model鈥檚 conclusions (Guo et al., 2022). when integrating ATTUN into a model.1 However, traditional models often function as black boxes, lacking explanations for thei
-- **方法与解释性关系**：该论文主要围绕 `Evaluation, Transformer, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+Evidence classifier 的 binary cross-entropy 与原始 verifier loss 相加：总损失为 model loss + gamma × evidence loss。由于 explainer 在 fine-tuning 时和 verifier 共享 attention，模型被鼓励把可用于决策的权重放到真正 evidence，而不是事后猜理由。
 
-## 4. Baseline 与对比讲解
+ATTUN 也提供每个 label 独立 classifier，允许 Supports/Refutes/NEI 使用不同证据关注模式。ATTEX 是不与 verifier 联合训练的简化 attention-analysis baseline，用来检验共享学习是否重要。
 
-- **检测到的 baseline / comparison 关键词**：We then explain the, We compare ATTUN against, Table 1, Performance comparison across different, Verifier, Each evidence matrix is, T5 serves as the, Table 2, Comparison of models based, Table 4, Table 5, Table 6, Comparison of model performance, Question Answering on MS, Marco with and without
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - tention between the context and the query within comparison to our approach. We then explain the
-  - average attention weight between the context in- We compare ATTUN against models with intrinsic
-  - Table 1: Performance comparison across different models and datasets for claim verification (Verifier) and explana-
-  - several variants: to provide a comprehensive comparison of all pa-
-  - manner for the claim span. Each evidence matrix is T5 serves as the baseline in this setting, while
-  - Table 2: Comparison of models based on various characteristics.
+## 3. Baseline / 对比基线
 
-## 5. Experiments 与 Findings 讲解
+- **GFCE**：带内生解释的 fact-checking 方法。
+- **LLaMA3、GPT-4o mini**：prompt 直接先找 evidence 再分类，其中 GPT-4o mini 还有 fine-tuned 版本。
+- **RoBERTa、DeBERTa-V3、Phi-4 mini + SHAP**：后处理 attribution baseline。
+- **ATTEX**：verifier 与 explainer 独立训练，测试 joint training 的价值。
+- **不同 retriever recall**：检验方法在 gold evidence 缺失和完整的 noisy context 下是否仍有效。
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - lack explainability regarding their decision pro- evant evidence would improve both accuracy and
-  - allowing the model both to improve predictions effectively aiming to expose the e虃 used by the
-  - ing. Experiments demonstrate improvements
-  - context, and gains of up to 18% in task accuracy with the model鈥檚 conclusions (Guo et al., 2022).
-  - during classification tasks, which significantly lim-
-  - 2021). This underscores the need for improved
-  - Finally, a significant challenge is the models鈥 2020) and scoring token/head salience (Liu et al.,
+## 4. Experiments / Findings：结果如何读
 
-## 6. Conclusion、局限与可复现性
+ATTUN 在四个 fact-checking 数据集上通常取得最高 evidence identification。Feverous 的 F1 Useful 从约 0.49 提升到 0.74，论文将其概括为最高约 51% 提升；该数据集 retriever recall 只有 0.36，说明 ATTUN 可以在不完整上下文中尽量从已有 passage 找有用证据。
 
-- **结论段落线索**：when integrating ATTUN into a model.1 However, traditional models often function as black boxes, lacking explanations for their out-
-- **局限/未来工作线索**：categorically labeling the claim as Supports, Re- both output and justification has shown limitations；derscoring the value of shared learning in ATTUN. 5 Conclusion and Future Work；We observe that ATTUN brings the most bene- in input lengths. Future work could explore the；Limitations ases present in their training data, leading to unfair
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+在 gold evidence recall=1 的数据集上，ATTUN 仍带来 verifier accuracy 和 evidence F1 提升，而不是只受益于缺失证据场景。表中例如 RoBERTa+ATTUN 在 Feverous accuracy/F1 约 0.68/0.75、F1 Useful 约 0.73；DeBERTa+ATTUN 约 0.72/0.78、F1 Useful 约 0.74。相比同 backbone 的 SHAP/ATTEX，joint ATTUN 的解释质量和 Noise F1 更稳。
 
-## 7. 一句话定位
+论文还报告任务 accuracy 最高约 18% 的提升；QA 附录显示将注意力 refinement 用于问答也有收益。这里应把 explanation 指标和 verifier 指标分开看：ATTUN 的贡献是同时提升两者，而不是只提高证据召回。
 
-这篇论文把“Refining Attention for Explainable and Noise-Robust Fact-Checking with Transformers”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+## 5. Ablation / 机制解释
+
+- **ATTUN vs ATTEX**：共享 attention refinement 的版本更好，支持解释和分类共同训练。
+- **ATTUN vs SHAP**：后处理 SHAP 计算昂贵，且不改变 verifier 的噪声鲁棒性；ATTUN 把 attribution 作为训练信号。
+- **单 classifier vs label-specific classifier**：不同 claim label 需要的 evidence 类型不同，label-specific 设计更灵活。
+- **Noisy/incomplete evidence**：在 recall<1 和 recall=1 的数据分别测试，确认收益不是单一 retriever artifact。
+
+## 6. Limitations / 局限与复现注意
+
+- Attention 不是天然忠实解释；ATTUN 通过联合监督增强可用性，但仍不等于完整 causal faithfulness。
+- Evidence span、reference claim span 和 gamma 的设计会显著影响解释标签。
+- 如果 retriever 完全没有关键事实，attention refinement 无法凭空恢复证据。
+- 论文主要在短文本 fact-checking/QA 上验证，长上下文、多跳证据链和开放生成仍需测试。
+
+## 7. 两句话总结
+
+ATTUN 解决 fact-checking 中 verifier 对噪声敏感、后处理解释与真实决策脱节的问题。它用 attention ratio 预测 evidence usefulness，并把 evidence loss 与分类 loss 联合训练，在四个数据集上同时提升证据识别和任务准确率，但 attention 的因果忠实性仍需要额外干预验证。
