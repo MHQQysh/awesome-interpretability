@@ -5,6 +5,7 @@ A curated paper table for large language model and foundation model interpretabi
 - [Large-model interpretability papers](#paper-table)
 - [Detailed per-paper reading notes](./paper_notes_001_200/INDEX.md)
 - [Batch reading overview](./interpretability_reading_notes.md)
+- [Manual reading progress](./MANUAL_READING_PROGRESS.md)
 
 ## Tag Description
 

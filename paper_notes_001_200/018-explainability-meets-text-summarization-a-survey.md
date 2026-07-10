@@ -1,60 +1,44 @@
 # 018. Explainability Meets Text Summarization: A Survey
 
-> 逐篇阅读记录：第 18 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：Abdul Waheed, Taha Hassan, Pedro M. Ferreira, Iryna Gurevych；INLG 2024
+- **论文**：[ACL Anthology](https://aclanthology.org/2024.inlg-main.49/)
+- **任务**：系统综述文本摘要中的 explainability，梳理模型、数据集、解释方式和评价指标
 
-## 0. 论文信息
+## 1. Introduction：摘要系统为什么需要解释
 
-- **作者**：Mahdi Dhaini, Ege Erdoğan, Smarth Bakshi, Gjergji Kasneci
-- **发表 venue / date**：ACL / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.inlg-main.49)
-- **领域标签**：Rationale, LLM, Behavior, Explain
-- **本地 PDF 文本规模**：约 9,355 个词
+摘要模型，特别是 LLM，常被当作黑盒：用户看到一个短摘要，却不知道哪些源文档内容被使用、哪些事实被删掉、摘要是否忠实，也不知道模型为什么选择当前组织方式。解释性的对象因此分成两类：面向终端用户解释输出，和面向开发者理解/调试模型。
 
-## 1. Abstract 讲解
+论文不是提出一个新摘要模型，而是回答五类 survey questions：常用模型/数据集/指标是什么；使用哪些 XAI 技术；解释如何可视化和评价；解释是否提高摘要性能；现有方法对哪些 stakeholder 真正有用。
 
-- **研究问题**：研究试图建立模型内部表征、外部行为和可解释结论之间的稳定联系。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Rationale为主线，结合论文摘要中的核心设定：Summarizing long pieces of text is a principal task in natural language processing with Machine Learning-based text generation models such as Large Language Models (LLM) being particularly suited to it.Yet these models a
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## 2. Survey Method
 
-## 2. Introduction 讲解
+- 采用 systematic review 流程，参考 Kitchenham and Charters 的方法。
+- 先定义检索、筛选和研究问题，再对摘要解释文献进行归类。
+- 分类维度包含：解释对象、解释生成方式、用户目标、评价方法和实际用途。
+- 综述还比较 extractive、abstractive、LLM-based summarization 的解释需求差异。
 
-- **引言结构**：1 Introduction；2 Background RQ3: How are such explanations visualized and；1144. Automatic Identification of Hallucinations in Large；2024. Knowledge-enhanced graph topic trans-
-- **引言关键线索**：the model鈥檚 prediction, and a summary explains Against the ever-growing influx of textual con- the summarized piece of text. It is thus beneficial tent, being able to effectively summarize long to consider the two problems together since ap- pieces of text is crucial to extract useful informa- proaches to one can inform the approaches to the tion. Whereas once a significant amount of manual other, as we will provide examples throughout the labour would be necessary, now automatic text sum- survey. marization (ATS) can be performed by deep learn- Contributions As far as we know, this work is ing models, especially as they grow in capabilities the first to present an overview of explainable text and become more easily accessible (Bubeck et al., summarization and to offer a dual perspective on 2023). Nevertheless, such deep learning models how explainability and summarization can mutu- are 
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 3. Baseline / comparison 在综述中的含义
 
-## 3. Method / Framework 讲解
+这篇 survey 的“baseline”不是一个单一模型，而是不同 explainability 家族的对比：
 
-- **方法段落线索**：understand summarization methods. Explainability Summarizing long pieces of text is a principal in summarization can take two forms, each target- task in natural language processing with Ma- chine Learning-based text generation models ing different stakeholders. The first form involves such as Large Language Models (LLM) being explaining the output of summarization models, in- particularly suited to it. Yet these models are tended for the end users of summarization systems. often used as black-boxes, making them hard The second form is focused on understanding and to interpret and debug. This has led to calls interpreting the internal workings and mechanisms by practitioners and regulatory bodies to im- of the summarization model, primarily aimed at prove the explainability of such models as they debugging the model, which is intended for model find ever more practical use. In this survey, we present a dual-perspective review of the int
-- **方法与解释性关系**：该论文主要围绕 `Rationale, LLM, Behavior, Explain` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+- **feature/attention visualization**：展示模型关注了哪些 token，但 attention 不一定等于因果贡献。
+- **input attribution / saliency**：用梯度、扰动或重要性分数解释输入影响。
+- **rationale / generated explanation**：用自然语言说明摘要为何如此生成。
+- **faithfulness evaluation**：删去或保留解释中的证据，检查摘要性能/输出是否变化。
+- **practical usefulness**：以人类评价、ROUGE/BERTScore 或任务调试收益判断解释是否有用。
 
-## 4. Baseline 与对比讲解
+综述强调，readability、plausibility 和 faithfulness 是不同维度，不能用一个漂亮的可视化替代全部评价。
 
-- **检测到的 baseline / comparison 关键词**：Comparison to ground truth, Two of the earlier, XAI are pre- claim, Our find-
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - Comparison to ground truth: ground truth terest in integrating inherent interpretation within
-  - Two of the earlier baseline surveys in XAI are pre- claim to cover all the related literature. Our find-
+## 4. Findings：领域共识与缺口
 
-## 5. Experiments 与 Findings 讲解
+- 文献中最常见的是 ROUGE 及其变体，但 ROUGE 主要衡量 n-gram overlap，不能充分评价解释忠实度或事实一致性。
+- 解释通常分为输出解释和模型理解解释；前者服务用户信任，后者服务开发者调试，两者的评价协议不应混用。
+- 人类评价仍是判断解释可读性和实用性的常见方式，但成本高、主观性强，且评价者可能把“合理”误判为“忠实”。
+- LLM 摘要带来新的问题：生成的 rationale 可能只是事后合理化，摘要本身也可能包含 hallucination，因此 explanation faithfulness 和 summary factuality 需要联合评价。
+- 综述指出数据集、模型、解释形式和指标缺乏统一协议，导致不同论文之间难以直接比较。
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - employed to improve explanations. to extract the essential bits of a longer piece of
-  - tion. Whereas once a significant amount of manual other, as we will provide examples throughout the
-  - 鈥 We discuss and draw conclusions on the prac- mulated our research questions with a high degree
-  - important problem in NLP around creating short RQ4: Can we derive practical conclusions on
-  - marization holds significant potential for further ity is applied to text summarization. Our aim is
-  - Insights: The significantly higher use of local
-  - tain imperceptible perturbations, and thus might ing BERTSum, and reported improvements in the
+## 5. 对后续研究的启示
 
-## 6. Conclusion、局限与可复现性
+摘要解释研究应至少报告：解释对象、用户、生成时间点、faithfulness test、输入删除/保留实验、人工评价协议，以及摘要质量和事实性的独立指标。尤其需要区分“解释帮助用户理解”与“解释揭示了模型真正使用的证据”。
 
-- **结论段落线索**：tical usefulness of explainability approaches of specificity as follows: in text summarization. RQ1: What are the popular models, datasets, 鈥 We highlight the popular models, datasets, and and evaluation metrics used in existing research on evaluation metrics for text summarization in explainable text summarization? the reviewed papers. RQ2: What XAI techniques are employed for text summarization in the existing research studies?
-- **局限/未来工作线索**：three experts evaluating the explanations of sum- ify model behavior. In this direction, future work；to enhance the interpretability of generative models 7 Limitations；Future work: To address the urgent need to Luca Bacco, Andrea Cimino, Felice Dell鈥橭rletta, and；plainability methods applied to ATS, future work Sixth International Workshop on eXplainable SENTI-
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
-
-## 7. 一句话定位
-
-这篇论文把“Explainability Meets Text Summarization: A Survey”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：这篇 survey 的价值在于把摘要 explainability 从一张 attention 图扩展成完整评价矩阵，并明确指出可读性、忠实度和实际有用性不是同一个指标。

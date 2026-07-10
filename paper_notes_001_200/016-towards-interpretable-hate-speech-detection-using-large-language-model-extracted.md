@@ -1,64 +1,49 @@
 # 016. Towards Interpretable Hate Speech Detection using Large Language Model-extracted Rationales
 
-> 逐篇阅读记录：第 16 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：Ayushi Nirmal, Amrita Bhattacharjee, Paras Sheth, Huan Liu；WOAH/ACL 2024
+- **论文**：[ACL Anthology](https://aclanthology.org/2024.woah-1.17/)
+- **任务**：hate speech detection；用 LLM 提取的 features/rationales 训练可解释分类器
 
-## 0. 论文信息
+## 1. Introduction：检测准确率之外还需要什么
 
-- **作者**：Ayushi Nirmal, Amrita Bhattacharjee, Paras Sheth, Huan Liu
-- **发表 venue / date**：ACL / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.woah-1.17)
-- **领域标签**：Probing, Rationale, Evaluation, LLM, Behavior, Detect
-- **本地 PDF 文本规模**：约 7,225 个词
+仇恨言论检测是高风险分类任务。仅给出 hate/non-hate 标签很难让审核员知道模型依据了哪些词，也难以判断模型是否把 target identity、方言或平台特征误当成仇恨证据。传统深度模型和 off-the-shelf LLM 通常不透明，而人工 rationale 又昂贵。
 
-## 1. Abstract 讲解
+SHIELD 的问题定义是：能否让 LLM 只承担“从文本抽取可读证据”的角色，再用这些证据训练检测器，从而同时保留性能和解释性？
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Probing为主线，结合论文摘要中的核心设定：Although social media platforms are a prominent arena for users to engage in interpersonal discussions and express opinions, the facade and anonymity offered by social media may allow users to spew hate speech and offens
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## 2. Method：SHIELD 的两阶段结构
 
-## 2. Introduction 讲解
+1. **LLM feature/rationale extraction**：用 ChatGPT 从输入中抽取可能的 derogatory words、cuss words、hostility cues 和自然语言 rationale；输出结构化 JSON。
+2. **Feature embedding**：将抽取的文本 features/rationales 编码成向量。
+3. **Hate speech detector**：把原文本表征和 LLM 提取证据结合，训练 HateBERT/其他 encoder 进行分类。
+4. **解释对齐评估**：比较 LLM rationales 与人工 annotated rationale 的重叠、相关性和是否覆盖真正的 hate cue。
 
-- **引言结构**：1 Introduction pre-trained language models or other deep neural；1. We propose SHIELD, a framework that lever- speech detection, such features could include cate-；2. We evaluate the goodness of LLM-extracted form this feature extraction, for each input text we；3. Through comprehensive experiments on both list of rationales, list of derogatory language, list；3 Methodology and Experimental posed model on the Implicit Hate Speech Corpus；4 Results and Discussion；7 Limitations；8 Ethical Considerations project (HR001120C0123), and the Office of Naval
-- **引言关键线索**：network type models (Sheth et al., 2023b) that are not interpretable or explainable. However, the task Content Warning: This document contains of hate speech detection is a very sensitive task, content that some may find disturbing or and explainability of automated detectors is an es- offensive, including content that is discrimi- sential and desirable feature. Model interpretability native, hateful, or violent in nature. is essential not only for end-user understanding but also for understanding biased predictions, domain shifts, other errors in the prediction, etc. Social media has become a platform of content While incorporating qualities of interpretability sharing and discussions for a varied range of in- directly into deep neural network models such as dividuals with differing cultural and continental pre-trained language model based detectors is chal- * These authors contributed 
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+这里的 LLM 不是最终判决者，而是 feature extractor。这个设计减少了“LLM 直接输出一个不可审计标签”的风险。
 
-## 3. Method / Framework 讲解
+## 3. Baseline 与对比
 
-- **方法段落线索**：disdain, or contempt based on their social attributes most of these black-box methods are not in- terpretable or explainable by design. To ad- (e.g., gender, race). In extreme cases, hate speech dress the lack of interpretability, in this paper, may often lead to real world harms such as hate we propose to use state-of-the-art Large Lan- crimes, for example the anti-Asian hate crimes dur- guage Models (LLMs) to extract features in the ing the COVID-19 pandemic (Findling et al., 2022; form of rationales from the input text, to train Han et al., 2023). Therefore, it is essential to have a base hate speech classifier, thereby enabling automatic hate speech detection and moderation faithful interpretability by design. Our frame- in place to maintain the integrity of social media work effectively combines the textual under- standing capabilities of LLMs and the discrim- platforms as well as to mitigate negative impacts inative power of state
-- **方法与解释性关系**：该论文主要围绕 `Probing, Rationale, Evaluation, LLM, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+- **HateBERT**：用 Reddit 仇恨内容继续预训练的 BERT，是主要检测基线和 SHIELD 的 detector backbone。
+- **HateXplain**：同时使用 hate label、target community 和人类 rationale 的模型，代表带人工解释监督的方法。
+- **PEACE**：利用 sentiment/aggression cues 的解释型方法。
+- **CATCH**：面向 hate speech 的其他分类/特征方法。
+- **ChatGPT one-shot**：测试 LLM 直接零样本/少样本检测，而不是抽取 rationale 后训练。
+- **数据**：Implicit Hate Speech Corpus 等多个数据集，主要使用 implicit hate 与 non-hate 做二分类；指标以 accuracy 为主。
 
-## 4. Baseline 与对比讲解
+## 4. Findings：解释是否牺牲准确率
 
-- **检测到的 baseline / comparison 关键词**：Baselines we use a, HateBERT3 model. We use, We compare our proposed, SHIELD framework to a, AdamW optimizer, Kingma and Ba, Model training was, GP102, TITAN Xp, GPU with 12 GB, VRAM, PEACE, We further extend our, CATCH, Furthermore, For the Feature Embedding, Sec-, Hate Speech Detector stark
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - tail including the datasets we included, the baseline
-  - 3.2 Baselines we use a pre-trained HateBERT3 model. We use
-  - We compare our proposed SHIELD framework to a AdamW optimizer (Kingma and Ba, 2014) with
-  - variety of different baselines in order to understand a learning rate of 2 脳 10鈭5 . Model training was
-  - use the following well-known baseline hate speech GP102 [TITAN Xp] GPU with 12 GB VRAM, and
-  - PEACE: We further extend our comparison on rationales, and do these rationales align with
+- ChatGPT 直接做 off-the-shelf detection 只能得到约 **58%-65%** 的准确率区间，说明“语言理解能力强”不等于稳定的仇恨分类器。
+- SHIELD 在多个数据集上保持接近或超过基线的检测效果；作者报告在部分设置中比简单基线有最高约 **12.5%** 的性能提升。
+- rationale 与 human annotation 的对齐结果显示，LLM 能抽到 derogatory words 和关键短语，但不总能识别隐式仇恨的社会语境；因此论文同时报告性能和 explanation alignment，而不是把所有抽取文本都视为可靠理由。
+- SHIELD 在不同 feature embedding model 和 hate detector 选择下仍有变化。表中原始 SHIELD、RoBERTa detector、RoBERTa feature embedder 的结果说明，解释质量与下游表示模型共同决定结果。
 
-## 5. Experiments 与 Findings 讲解
+## 5. Ablation 与误差来源
 
-- **可检测的数值信号**：1X
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - We show our proposed SHIELD framework in Feature Embedding Model For the textual fea-
-  - 2018)) We see significant overlap and a high se-
-  - For some additional analysis on the effect of the in training to improve the efficacy of detection.
-  - hate (ElSherief et al., 2018). In order to improve a detector model to enable interpretability in an
-  - causal cues (Sheth et al., 2023b). Another study 6 Conclusion and Future Work
-  - demonstrated improved performance across not LLM-extracted rationales to augment the training
-  - pages 149鈥159. to improve hate speech detection. arXiv preprint
+- 只用原始文本、不加入 LLM features：检查 rationale augmentation 的真实增益。
+- 只加入 words/features、不加入完整 rationale：检查短关键词与长解释的差异。
+- 更换 feature embedding model 或 HSD detector：验证方法是否依赖 HateBERT。
+- 对比 human rationale 与 LLM rationale：LLM 抽取的解释更容易覆盖表面词，但隐式仇恨、讽刺和 target context 仍可能错。
 
-## 6. Conclusion、局限与可复现性
+## 6. 局限与伦理
 
-- **结论段落线索**：discussions and express opinions, the facade not always peaceful, they can degenerate into un- and anonymity offered by social media may pleasant altercations and bigoted arguments. Thus, allow users to spew hate speech and offensive social media platforms often become a host for hate content. Given the massive scale of such plat- speech. Hate speech is described as any deliberate forms, there arises a need to automatically iden- and purposeful public communication meant to dis- tify and flag instances of hate speech. Although parage a person or a group by expressing hatred, several hate speech detection methods exist, disdain, or contempt based on their social attributes most of these black-box methods are not in- terpretable or explainable by design. To ad- (e.g., gender, race). In extreme cases, hate speech dress the lack of interpretability, in this paper, may often lead to real world harms such as hate we propose to use state-of-the-art Large Lan- crimes, for example the anti-Asia
-- **局限/未来工作线索**：causal cues (Sheth et al., 2023b). Another study 6 Conclusion and Future Work；one dataset. Future work can investigate better au- by employing LLMs in an out-of-the-box manner；pretable hate speech detectors, several limitations superiority, incite racial discrimination, or encour-
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+数据包含冒犯性内容；LLM 提取的 rationale 可能复制有害语言，也可能把模型偏见包装成“解释”。人工 rationale 的覆盖和质量不一致，accuracy 不能取代 subgroup fairness、跨平台泛化和误报分析。
 
-## 7. 一句话定位
-
-这篇论文把“Towards Interpretable Hate Speech Detection using Large Language Model-extracted Rationales”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：SHIELD 的核心贡献是把 LLM 从黑盒分类器改成“可审计证据提取器”，但解释是否真实改善了高风险分类，仍需在人类一致性、跨域泛化和偏差指标上继续验证。

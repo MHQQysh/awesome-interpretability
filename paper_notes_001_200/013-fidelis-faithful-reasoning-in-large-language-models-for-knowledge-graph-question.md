@@ -1,64 +1,48 @@
 # 013. FiDeLiS: Faithful Reasoning in Large Language Models for Knowledge Graph Question Answering
 
-> 逐篇阅读记录：第 13 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：Yuan Sui, Yufei He, Nian Liu, X. He, Kun Wang, Bryan Hooi；Findings of ACL 2025
+- **论文**：[ACL Anthology](https://aclanthology.org/2025.findings-acl.436/)
+- **任务**：KGQA；在知识图谱上寻找可验证、有效率的 LLM 推理路径
 
-## 0. 论文信息
+## 1. Introduction：为什么 KG 不自动带来 faithfulness
 
-- **作者**：Yuan Sui, Yufei He, Nian Liu, X. He, Kun Wang, Bryan Hooi
-- **发表 venue / date**：ACL / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.findings-acl.436)
-- **领域标签**：Evaluation, Reasoning, Hallucination, Behavior, Evaluate
-- **本地 PDF 文本规模**：约 10,471 个词
+LLM 在复杂问题上可以生成流畅推理，但事实错误往往出现在中间步骤。把知识图谱接入模型看似可以解决问题，实际又有两个冲突：检索太宽会带来噪声和成本，检索太窄会漏掉真正的推理路径；agent 式逐步探索虽然灵活，却可能反复调用 LLM、生成不存在的边或在错误路径上继续推理。
 
-## 1. Abstract 讲解
+FiDeLiS 的目标不是只提高答案 accuracy，而是让中间 reasoning path 能被 KG 中的实体、关系和逻辑规则逐步验证，并在效率上优于昂贵的全图搜索。
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决大模型推理过程不透明、正确性信号难以从内部状态读出的问题。。方法上以Evaluation为主线，结合论文摘要中的核心设定：Large Language Models (LLMs) are often challenged by generating erroneous or hallucinated responses, especially in complex reasoning tasks.Leveraging Knowledge Graphs (KGs) as external knowledge sources has emerged as a
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## 2. Method：Path-RAG + DVBS
 
-## 2. Introduction 讲解
+### Path-RAG：先缩小候选空间
 
-- **引言结构**：2014 World Series Retrieval Reasoning Step；3 Method user question, ensuring the final reasoning path is；4 Experiments；6 Conclusion；5 Related Work；140 WebQSP CWQ CR-LT
-- **引言关键线索**：Large Language Models (LLMs) have shown im- Existing KG-enhanced LLM reasoning methods pressive reasoning capabilities in tackling complex face notable challenges and can be roughly cate- tasks (Yu et al., 2024; Sui et al., 2025). However, gorized into two primary approaches: retrieval- their reasoning processes are not always reliable, based and agent-based paradigms (Luo et al., and can be prone to generating outputs that are ei- 2025). Retrieval-based methods (Wang et al., 2023; ther inconsistent with real-world facts (Xu et al., Luo et al., 2024; Baek et al., 2023) retrieve rel- 2024; Huang et al., 2025) or show flawed reason- evant KG facts to support LLM reasoning by ei- ing process (Li et al., 2024; Sui et al., 2024). Such ther prompting (Baek et al., 2023) or fine-tuning limitations significantly undermine the trustwor- LLMs to learn the underlying structure of KG (Luo thiness of
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+LLM 先从问题抽取关键实体/关系，并把它们转成 embedding；Path-RAG 迭代检索与 query 相关的实体和关系，形成候选 reasoning steps。它不是把所有三元组拼成 prompt，而是尽量保留“实体-关系”结构，从而减少噪声和 token 消耗。
 
-## 3. Method / Framework 讲解
+### Deductive-Verification Beam Search（DVBS）
 
-- **方法段落线索**：agent-based, encounter difficulties in accurately Figure 1: Challenges for existing KG-enhanced meth- retrieving knowledge and efficiently traversing ods: How to balance faithfulness and efficiency? KGs at scale. In this paper, we propose a uni- fied framework, FiDeLiS1 , designed to improve To address this issue, leveraging knowledge the factuality of LLM responses by anchoring graphs (KGs) as external knowledge sources has answers to verifiable reasoning steps retrieved emerged as a viable solution (Sun et al., 2023; Ma from KGs. To achieve this, we leverage step- et al., 2024; Luo et al., 2024). Unlike traditional wise beam search with a deductive scoring func- retrieval-augmented generation (RAG) that relies tion, allowing the LLM to validate reasoning on web pages or documents (Liu et al., 2024; Qian process step by step, and halt the search once et al., 2024; Bayarri-Planas et al., 2024), KGs repre- the question is deducible. In a
-- **方法与解释性关系**：该论文主要围绕 `Evaluation, Reasoning, Hallucination, Behavior, Evaluate` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+DVBS 在候选路径上做 step-wise beam search。每扩展一个 reasoning step，就检查它是否能由当前 KG 信息和已有路径演绎得到；同时使用局部/全局验证分数控制 beam。这样终点选择不仅依赖 LLM 的最大概率，还要考虑路径是否存在、是否连贯、是否满足逻辑约束。
 
-## 4. Baseline 与对比讲解
+## 3. Baseline 与对比
 
-- **检测到的 baseline / comparison 关键词**：KGs, It is defined as, See the prompt in, This step is query, Compared with existing methods, Sun, Table 1, Comparison of FiDeLiS with, LLMs, We replicate the outcomes, ToG and, RoG, We utilize 5 demonstrations, KGQA, Path-RAG, Ablating DVBS, In Table 1, De- mance gains are
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - outperforms strong baselines in both accuracy and ing KGs. It is defined as: given a user query q
-  - the query (See the prompt in 搂C.1). This step is query. Compared with existing methods like Sun
-  - Table 1: Comparison of FiDeLiS with baseline methods and different backbone LLMs. We replicate the outcomes of ToG and
-  - RoG, and retrieve other baseline results directly from the original paper. We utilize 5 demonstrations as our default setting for
-  - son results with other baselines over KGQA; (2) remains below using Path-RAG. Ablating DVBS
-  - In Table 1, we compare the performance of differ- the results confirm the critical roles of Path-RAG
+- **LLM-only**：Few-shot、CoT 等，代表没有外部 KG 结构约束的推理。
+- **KG-enhanced**：ToG、RoG、CAF 等已有 KG 推理方法。
+- **retriever 对比**：vanilla retriever、BM25、KAPING 风格检索与 Path-RAG。
+- **backbone 对比**：GPT-3.5、GPT-4o、GPT-4-turbo、GPT-4o-mini 以及开源 LLM。
+- **指标**：WebQSP、CWQ 的 Hits@1/F1，CR-LT 的准确率；同时报告 reasoning path validity、runtime、token usage 和 LLM 调用次数。
 
-## 5. Experiments 与 Findings 讲解
+这些对比很关键：FiDeLiS 的 claim 是“faithful 且高效”，因此必须同时和 KG 方法比正确性、和简单 retriever 比效率、和 LLM-only 比是否真正减少幻觉。
 
-- **可检测的数值信号**：1.7x
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - fied framework, FiDeLiS1 , designed to improve To address this issue, leveraging knowledge
-  - only improve the performance but also enhance Moreover, each fact in a KG can be traced back to
-  - limitations significantly undermine the trustwor- LLMs to learn the underlying structure of KG (Luo
-  - space, significantly reducing latency without com- Task definition. In this work, we focus on the
-  - outperforms strong baselines in both accuracy and ing KGs. It is defined as: given a user query q
-  - knowledge graphs to improve factual accuracy. function f can be generally expressed as finding
-  - able reasoning, we propose FiDeLiS to improve the Retrieval-Augmented Generation
+## 4. Findings 与数值结果
 
-## 6. Conclusion、局限与可复现性
+- 在 GPT-3.5 设置下，FiDeLiS 在 WebQSP/CWQ/CR-LT 上达到 **79.32 / 63.12 / 67.34** 的核心结果；论文报告其整体优于 LLM-only 和强 KG baseline。
+- 论文引用的强 baseline RoG 在部分设置下达到 **83.15 Hits@1、69.81 F1**，因此 FiDeLiS 的优势不是每个单项都绝对领先，而是准确率、路径有效性和推理效率的综合权衡。
+- Path-RAG 显著优于简单文本化三元组检索；去掉 keywords 后，表中结果出现约 **3.83、4.11、5.65** 个百分点的下降，说明 query/entity/relation 的结构化检索不是装饰组件。
+- DVBS 的 deductive verification 能提高终止信号和路径有效性；去掉 DVBS 或 beam search 组件后，准确率和 reasoning path validity 均下降。
+- 运行分析显示 FiDeLiS 的 token 和调用成本低于一些 agent 式基线，但 beam width、搜索深度和验证频率会改变效率-准确率折中。
 
-- **结论段落线索**：in 搂4.4 and Appendix 搂B. search offers several benefits: it (1) enhances the robustness and validity of the final answer by en- Deductive Verification. To ensure that each rea- forcing logical coherence at every step, (2) reduces soning step logically follows from its predeces- computational overhead by pruning unpromising sors and adequately supports the original query, paths early, and (3) mitigates risks such as pre- we leverage the deductive reasoning capabilities of mature termination or excessive extension of the LLMs as a verification criterion (Ling et al., 2023) reasoning process. We provide a concrete example for the beam search process. We first convert the of the deductive verification process in 搂C.6 and user query q into a clear declarative statement q 鈥 , the complete DVBS algorithm in Algorithm 2. 8319 WebQSP CWQ CR-LT WebQSP CWQ CR-LT Ablation Setting Components Methods Backbones Hits@1 (%) Hits@1 (%) Acc (%) Hits@1 (%) Hits@1 (%) Acc (%) No ablation FiDeLiS 79.32 63.1
-- **局限/未来工作线索**：limitations significantly undermine the trustwor- LLMs to learn the underlying structure of KG (Luo；ability limitations. As illustrated in Figure 1, how entity.；traceability (Chen et al., 2024). Limitations；hibits certain limitations. Its reliance on external Data Mining, pages 553鈥561.
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 5. Ablation 与错误分析
 
-## 7. 一句话定位
+- **w/o Path-RAG**：用 vanilla retriever 代替结构化候选生成，路径连接性和最终 QA 下降。
+- **w/o DVBS**：直接由 LLM 选路径，容易保留格式正确但 KG 中不存在的边。
+- **w/o keywords / embedding 变化**：检索候选召回变差，说明 Path-RAG 依赖实体和关系提示的质量。
+- **path error analysis**：论文区分 format error、non-existent edge、wrong relation 和终点选择错误；这比只看答案错更能说明系统的 faithfulness 来源。
 
-这篇论文把“FiDeLiS: Faithful Reasoning in Large Language Models for Knowledge Graph Question Answering”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：FiDeLiS 的可解释性来自“每一步都可回到 KG 验证”，而不是让 LLM 多写一段 rationale；它把 reasoning path 变成了结构化、可检查的中间对象。

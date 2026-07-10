@@ -1,63 +1,52 @@
 # 011. Faithful and Robust LLM-Driven Theorem Proving for NLI Explanations
 
-> 逐篇阅读记录：第 11 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+- **作者 / venue**：Xin Quan, Marco Valentino, Louise A. Dennis, Andre Freitas；ACL 2025
+- **论文**：[ACL Anthology](https://aclanthology.org/2025.acl-long.867/)
+- **任务**：NLI explanation refinement；把自然语言解释转成形式逻辑并用 theorem prover 验证
 
-## 0. 论文信息
+## 1. Introduction：论文到底在解决什么
 
-- **作者**：Xin Quan, Marco Valentino, Louise A. Dennis, Andre Freitas
-- **发表 venue / date**：ACL / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.acl-long.867)
-- **领域标签**：Representation, Rationale, Hidden, LLM, Behavior, Explain
-- **本地 PDF 文本规模**：约 13,027 个词
+NLI 的解释不是简单地“给出一个看起来合理的理由”，而是要说明 premise 为什么蕴含 hypothesis。以往 LLM 生成的解释容易出现三类问题：自然语言到逻辑形式的自动形式化会丢失语义；形式逻辑中会出现语法错误或内部矛盾；即使 theorem prover 给出反馈，LLM 也不一定能把反馈整合成一个完整、忠实的证明。
 
-## 1. Abstract 讲解
+论文的研究缺口因此不是“能不能生成解释”，而是**解释是否保留原始语义、是否能通过形式验证、以及能否在验证反馈下稳定修正**。作者将已有的 Explanation-Refiner 作为主要基线，并把 Faithful-Refiner 定位为一个 LLM + theorem prover 的联合 refinement 框架。
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Representation为主线，结合论文摘要中的核心设定：Natural language explanations play a fundamental role in Natural Language Inference (NLI) by revealing how premises logically entail hypotheses.Recent work has shown that the interaction of large language models (LLMs) w
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+## 2. Method：四个环节如何串起来
 
-## 2. Introduction 讲解
+1. **更稳健的 autoformalisation**：用 Neo-Davidsonian event semantics 将自然语言事件、参与者和关系转成逻辑表示，减少复杂句子的语义丢失。
+2. **语法错误检查与修复**：在送入 theorem prover 前检查逻辑表达式；对变量、量词和关系连接进行显式修正，而不是让 prover 直接吞下错误形式。
+3. **逻辑一致性 refinement**：用 SymPy 等工具推导逻辑蕴含、检查公理之间的矛盾，并把结构化反馈提供给 LLM。
+4. **proof sketch 引导**：让 LLM 先生成结构化的证明草图，再由 prover 搜索和验证证明；如果失败，则以失败类型为条件进行迭代修复。
 
-- **引言结构**：1 Introduction；4. We also perform a manual evaluation to assess apply a quantifier and a logical consistency check；2 Automated Theorem Proving for tool (Paulson and Blanchette, 2012) within Is-；3 Methodology ing theorem provers with LLMs, especially for；V NP-OBJ may still prove a theorem within a formal system,；4 Empirical Evaluation；60 Our-GPT-4o 60 Our-GPT-4o 60 Our-GPT-4o；70 Ours-Deepseek-V3 70 Ours-Deepseek-V3 70 Ours-Deepseek-V3
-- **引言关键线索**：art LLM-based theorem proving framework for Recent studies in Natural Language Inference NLI, Explanation-Refiner (Quan et al., 2024b). In (NLI) have developed models to leverage natu- particular, we explore methodologies to improve ral language explanations as a mechanism for rea- the faithfulness of autoformalisation and deliver soning in support of a hypothesis (Wiegreffe and a more robust way to effectively and efficiently 1 Code and data are available at: https://github.com/neuro- provide logically valid explanations. We further symbolic ai/faithful_and_robust_nli_refinement examine how varying degrees of dataset complex- 17734 Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 17734鈥17755 July 27 - August 1, 2025 漏2025 Association for Computational Linguistics shows "鈭儀 y. Person x 鈭 Alone x 鈭 Field y 鈭 鈭儀. OnePers
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+这个设计的关键不是单独使用 theorem prover，而是把 prover 放在生成循环中：LLM 负责语言理解和候选证明，符号工具负责硬约束检查，LLM 再根据反馈修正解释。
 
-## 3. Method / Framework 讲解
+## 3. Baseline 与对比协议
 
-- **方法段落线索**：tions. However, TPs require translating natural language into machine-verifiable formal repre- ential and linguistic capabilities of large language sentations, a process that introduces the risk of models (LLMs) by integrating them with external semantic information loss and unfaithful inter- theorem provers (TPs) to automatically verify the pretation, an issue compounded by LLMs鈥 chal- logical validity of explanations for NLI (Pan et al., lenges in capturing critical logical structures 2023; Olausson et al., 2023; Quan et al., 2024b; with sufficient precision. Moreover, LLMs are Dalal et al., 2024). still limited in their capacity for rigorous and However, these integrated neuro-symbolic ap- robust proof construction within formal verifi- cation frameworks. To mitigate issues related proaches still face notable challenges. First, auto- to faithfulness and robustness, this paper in- mated theorem provers (ATP) require a machine- vestiga
-- **方法与解释性关系**：该论文主要围绕 `Representation, Rationale, Hidden, LLM, Behavior, Explain` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+- **主要 baseline**：Explanation-Refiner，代表已有的 LLM-driven NLI explanation refinement。
+- **模型维度**：论文比较 GPT-4o、GPT-4o-mini、Llama 3.1 70B、DeepSeek-V3 等不同 LLM，避免把结论绑定到一个模型。
+- **数据集**：e-SNLI、QASC、WorldTree；从单步自然语言推理到多跳、知识密集型解释，难度逐步增加。
+- **指标**：autoformalisation 的有效率/faithfulness、解释 refinement 成功率、逻辑有效性、平均 refinement 迭代次数，以及人工评价。
+- **为什么这些 baseline 合理**：只比较最终 NLI accuracy 会掩盖解释错误；Explanation-Refiner 提供同类系统对照，不同 LLM 则用于检验框架是否依赖某个模型的语言能力。
 
-## 4. Baseline 与对比讲解
+## 4. Findings：结果说明了什么
 
-- **检测到的 baseline / comparison 关键词**：Table 1, Comparison of our approach, Explanation-Refiner on different LLMs, Init, We compare our entific, Comparison of manually evaluated, Refiner, Quan et al, Bottom
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - Table 1: Comparison of our approach with Explanation-Refiner on different LLMs across three datasets. Init.
-  - each comprising 100 instances. We compare our entific explanations requiring multi-hop reasoning.
-  - Comparison of manually evaluated variable, implication, and quantifier errors in the autoformalisation process from
-  - Refiner (Quan et al., 2024b) as our baseline work,
-  - refined across three datasets. Bottom 鈥 Comparison of manually evaluated variable, implication, and quantifier errors
+- 相对 state-of-the-art baseline，autoformalisation 在三个数据集上的提升分别达到 **18.46%、34.2%、39.77%**；解释 refinement 提升分别为 **29.5%、51.5%、41.25%**。
+- 复杂数据集上的收益更能说明问题：当解释包含多跳关系或多个公理时，单纯生成式 refinement 更容易出现语义漂移，而语法检查、逻辑一致性和 proof sketch 提供了逐步约束。
+- 论文报告了不同 refinement 阶段的曲线：随着修正迭代进行，逻辑有效解释数量增加，内部 syntax error 减少；但继续迭代也可能带来额外成本，因此“越多轮越好”并不成立。
+- 运行成本是代价。相比 Explanation-Refiner，Faithful-Refiner 需要多次 LLM 调用和 theorem prover 检查；论文因此同时比较 refinement 次数、时间和成本，而不是只报告准确率。
 
-## 5. Experiments 与 Findings 讲解
+## 5. Ablation：去掉模块会发生什么
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - verify and improve the validity of NLI explana-
-  - yield significant improvements in autoformali- rial inferences (Pan et al., 2023; Olausson et al.,
-  - LLM-TP architecture can substantially improve nations) into cohesive proofs and effectively self-
-  - (NLI) have developed models to leverage natu- particular, we explore methodologies to improve
-  - ity in multi-hop reasoning affect the reliability of posed framework improves the faithfulness of aut-
-  - use LLMs to refine these errors explicitly from the improvement of 29.5%, 51.5%, and 41.25%
-  - WorldTree (Jansen et al., 2018) shows that the pro- work significantly improve the faithfulness of
+- 去掉 syntactic parsing 后，复杂句子的形式化更容易出现结构错误，后续 prover 失败率上升。
+- 去掉 quantifier refinement 会削弱对全称/存在量词的处理，尤其影响多实体、多关系的 NLI 解释。
+- 去掉 logical consistency check，系统可能保留可以形式化但互相矛盾的公理；这类错误在表面语言评价中不一定暴露。
+- 去掉 proof sketch 或外部反馈后，LLM 更难把多个逻辑条件组合成一个可验证证明。
 
-## 6. Conclusion、局限与可复现性
+这些 ablation 支持的不是“每个组件都独立带来同样的收益”，而是说明系统的收益来自**语言生成、符号检查、反馈修复三者的闭环**。
 
-- **结论段落线索**：with "False". We then attempt to prove this modi- abelle/HOL, proof tactics are commands that sys- fied theorem, if the TP finds a proof, it indicates a tematically decompose complex proofs into sim- contradiction within the axioms. In this case, we pler sub-goals, automating routine steps such as use an LLM to refine the axioms and attempt to simplification. Typically, one is asked to prove a solve the contradictions. statement X given assumptions Y by using proof tactics Z, where Z includes commands like simp 3.3 Proof, Verification and Refinement (for simplification), auto (for automatic reasoning), After autoformalisation checking and refinement, and blast (for first-order reasoning). These tac- we employ the theorem prover T P to verify the log- tics instruct Isabelle鈥檚 proof engine on how to pro- ical validity of the axioms and determine whether cess a proof step by applying appropriate rules, A /= 蟿 holds. We first use the Sledgehammer tool simplifications, or other reasoning me
-- **局限/未来工作线索**：Limitations Qianglong Chen, Feng Ji, Xiangji Zeng, Feng-Lin；Future work may explore more advanced semantic Preprint, arXiv:2412.19437.
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 6. 局限与复现重点
 
-## 7. 一句话定位
+- theorem prover 的语言覆盖和 formalisation 设计会限制可处理的 NLI 类型。
+- prover 通过不等于自然语言解释完全忠实；形式化本身仍可能把原句翻译错。
+- 需要固定 LLM、prompt、迭代上限、proof timeout 和错误修复策略，否则成本与成功率不可比。
 
-这篇论文把“Faithful and Robust LLM-Driven Theorem Proving for NLI Explanations”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+**一句话评价**：这篇论文把“解释是否合理”转成了“解释能否被形式化、验证、反馈修复”的工程闭环，是自然语言解释 faithfulness 走向可验证推理的重要一步。
