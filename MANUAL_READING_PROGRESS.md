@@ -41,6 +41,7 @@
 | 411-420 | 已完成 | 已逐篇读取可获得全文；420 为 workshop 条目，出版商全文不可直接获取，明确记录摘要/元数据证据边界；其余覆盖 sparse probing、fine-tuning wrapper、protein knowledge neurons、hallucination、attribution、CoT faithfulness 和 RAG tradeoff |
 | 421-430 | 已完成 | 已逐篇读取本地全文，覆盖 Tracr ground-truth compiler、事实一致性、circuit probing、hallucination surveys、adversarial hallucination、self-contradiction、CLIP explainability 和 low-confidence validation |
 | 431-440 | 已完成 | 已逐篇读取本地 PDF，覆盖 LVLM/MLLM object hallucination 的 LURE/Woodpecker、LLM PII leakage、医学自我反思、CoT gradient attribution、问题分解与 faithfulness、水印 source attribution、ActAdd、作者归属流派和 stylometry |
-| 441-500 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
+| 441-450 | 已完成 | 已逐篇读取本地 PDF，覆盖 DIT 道德推理、Transformer topic learning、Attention Lens、in-context probing、分布式 interpretability 基础设施、LLM self-explanation、ViT class embedding、CoT 不忠实解释、自动驾驶自然语言解释和 executable Faithful CoT |
+| 451-500 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
 
 > 这里的“已完成”指已逐篇检查论文正文，而不是只根据标题或摘要生成模板。
