@@ -11,7 +11,8 @@
 | 111-120 | 已完成 | 已逐篇核对 PDF 的 Introduction、Method、Baseline、Experiments、Ablation、Findings 和 Limitations |
 | 121-130 | 已完成 | 已逐篇核对 PDF 的 Introduction、Method、Baseline、Experiments、Ablation、Findings 和 Limitations |
 | 131-140 | 已完成 | 已逐篇核对 PDF 的 Introduction、Method、Baselines、Experiments、Ablation、Findings 和 Limitations，并重写详细人工阅读笔记 |
-| 141-200 | 待精读 | 已有结构化初稿，不能替代人工精读 |
+| 141-150 | 已完成 | 已逐篇核对 PDF 的 Introduction、Method、Baselines、Experiments、Ablation、Findings 和 Limitations，并重写详细人工阅读笔记 |
+| 151-200 | 待精读 | 已有结构化初稿，不能替代人工精读 |
 | 201-500 | 待精读 | 已扩充到 500 篇清单，后续按每批 10 篇处理 |
 
 > 这里的“已完成”指已逐篇检查论文正文，而不是只根据标题或摘要生成模板。
