@@ -1,61 +1,40 @@
 # 111. Understanding Faithfulness and Reasoning of Large Language Models on Plain Biomedical Summaries
 
-> 逐篇阅读记录：第 111 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：Findings of EMNLP 2024。重点是 biomedical plain-language summary 的专家 faithfulness/ reasoning 标注，以及通用 metric 的域迁移失败。
 
 ## 0. 论文信息
 
-- **作者**：Biaoyan Fang, Xiang Dai, Sarvnaz Karimi
-- **发表 venue / date**：EMNLP / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.findings-emnlp.578)
-- **领域标签**：Rationale, Evaluation, Reasoning, LLM, Behavior, Evaluate
-- **本地 PDF 文本规模**：约 14,094 个词
+- **作者**：Biao Zhang 等
+- **来源**：[Findings of EMNLP 2024](https://aclanthology.org/2024.findings-emnlp.578)
+- **数据**：175 篇 biomedical articles、1445 个摘要句子；7 个 LLM 生成摘要
+- **指标**：句子 faithfulness、abstractiveness、readability、supporting sentence retrieval
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决大模型推理过程不透明、正确性信号难以从内部状态读出的问题。。方法上以Rationale为主线，结合论文摘要中的核心设定：Generating plain biomedical summaries with Large Language Models (LLMs) can enhance the accessibility of biomedical knowledge to the public.However, how faithful the generated summaries are remains an open yet critical q
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+医学摘要既要让公众读懂，又不能改变研究发现、方法和结论。通用新闻摘要 faithfulness metric 可能不了解医学术语、证据链和隐含限定，因此需要专门的医生标注与 reasoning 级分析。
 
-## 2. Introduction 讲解
+## 2. Method / Framework：怎么解决
 
-- **引言结构**：3 Dataset Creation Flan-T5-XL on the PLOS dataset and investi-；5 Supporting Sentence Identification；7 Limitations；6 Conclusions main challenges in benchmarking the faithfulness；2024. Scaling Instruction-Finetuned Language Mod-；2020. BioBERT: a pre-trained biomedical language；I Analysis of Annotated Supporting
-- **引言关键线索**：used in domain-specific areas, such as the biomedi- Generating plain text summaries鈥攕ummarising cal domain, remains an open question (Ramprasad technical articles in plain language鈥攈elps facili- et al., 2024). tate public access to biomedical knowledge and has Additionally, current research (Chiang and Lee, been an important topic in the biomedical domain 2023b) has shown that, although LLM-based eval- (Goldsack et al., 2022, 2023; Guo et al., 2021). De- uators achieve promising alignments with human spite the overall performance achieved by LLMs judgment, they do not always provide correct rea- (Jahan et al., 2024; Guo et al., 2024; Sim et al., soning for their decisions, e.g., correct rationales 2023), the faithfulness, which is to what extent the or supporting sentences from text. Examining to generated text is consistent with the source articles, what extent LLMs can provide correct 
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+作者让医学标注者判断每个 summary sentence 是否被 source article 支持，并高亮 supporting evidence、给出 rationale；再比较 GPT-4、Claude、Gemini、Llama 等模型生成的 plain summaries。另按 abstractiveness 高低分组，测试摘要越“改写”是否越容易失真。
 
-## 3. Method / Framework 讲解
+## 3. Baseline / 对比基线
 
-- **方法段落线索**：three major research questions: (5) Can LLMs iden- summarisation and measured the faithfulness of tify the supporting sentences from the source article GPT-based text simplification on biomedical ab- when they are instructed to evaluate the faithfulness stracts. of generate summaries? (6) How does the abstrac- Current research has proposed various metrics tiveness of the summary impact the identification based on different frameworks to evaluate the faith- of supporting sentences? (7) Do LLMs perform fulness of generated text for the general domain: better when identifying supporting sentences for (1) QA-based metrics (Scialom et al., 2021; Fab- their own generated summaries? bri et al., 2022; Durmus et al., 2020), utilising QA To the best of our knowledge, our study is the systems to measure the correctness of answering first publicly available benchmark dataset investi- the questions based on the source and summaries, gating faithfuln
-- **方法与解释性关系**：该论文主要围绕 `Rationale, Evaluation, Reasoning, LLM, Behavior, Evaluate` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+通用 QuESTEval、QAFactEval、SummaC、BLEURT 等自动 faithfulness metric；LLM-based evaluator；Okapi BM25 supporting-sentence retrieval；只给 binary label 与要求 evaluator 生成 reasoning 的 prompt。
 
-## 4. Baseline 与对比讲解
+## 4. Experiments / Findings：结果如何读
 
-- **检测到的 baseline / comparison 关键词**：For the baseline, Okapi BM25, Llama-3 is under licence, LLAMA, Fangyi Yu, Lee Quartey, Frank Schilder. 2023. B, Comparison of the PLOS
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - between current automatic faithfulness evaluators For the baseline, we consider Okapi BM25
-  - our models serve as baselines for investigating the terms 18 Llama-3 is under licence 鈥淢ETA LLAMA
-  - Fangyi Yu, Lee Quartey, and Frank Schilder. 2023. B Comparison of the PLOS and eLife
+更高 abstractiveness 与 non-faithful factual hallucination 正相关；更易读的摘要也可能加入未被原文支持的细节。七个模型在 faithfulness、readability 和 abstractiveness 间存在不同 trade-off，不能只按语言质量排序。
 
-## 5. Experiments 与 Findings 讲解
+通用 metric 在 biomedical domain 的 agreement 较差，直接迁移新闻摘要 evaluator 会漏掉医学限定和证据错误。要求 evaluator 同时返回 supporting sentences/reasoning 通常比只返回 label 更有帮助，但仍不能完全解决域偏差。BM25 在 low-abstractiveness 摘要上较强，高抽象改写时检索支持句明显变难。
 
-- **可检测的数值信号**：8.00      percentage
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - We find that generated summaries demonstrate a ing the entailment of the summary (hypothesis)
-  - to outperform the GPT family in certain tasks, e.g., lications across various resources. We randomly
-  - mostly focuses on general named entities (e.g., per- fulness percentage across selected LLMs. We find
-  - pared to traditional metrics. Interestingly, prompt- by other models. In addition, we find that the differ-
-  - tences improves the performance of Gemini-1.5 model tendency regarding their faithfulness eval-
-  - and Llama-3, but it does not show further improve- uation. For example, when evaluating summaries
-  - from high abstractive summaries. Okapi BM25 serve that the model outperforms the others when
+## 5. Ablation / 机制解释
 
-## 6. Conclusion、局限与可复现性
+abstractiveness 高低分组、LLM-only vs metric、binary label vs label+evidence、BM25 top-k 和 evaluator prompt 都被对照；结果说明 faithfulness 评估难点来自医学领域知识和改写程度，而不只是模型大小。
 
-- **结论段落线索**：and improve their clinical skills. The VSIP was considered a potential supplement to physical clinical placements and could revolutionize global optometric education by offering co-learning across cultures. [...] The International Eyecare Community (IEC) was created with the purpose to incorporate the inherent advantages of virtual simulation and deliver collaborative global education by offering flexible, diverse, personalised, accessible and equal learning opportunities [4,5]. This platform was not created to replace face-to-face teaching; [...]. Summary It has potential to enhance optometry training by offering flexible, accessible international learning experiences. Extraction Error: Annotator Overlook: #1 The International Eyecare Community (IEC) was created with the purpose to incorporate the inherent advantages of virtual simulation and deliver collaborative global education by offering flexible, diverse, personalised, accessible and equal learning opportunities [4,5] Extraction
-- **局限/未来工作线索**：未稳定识别 limitations 小节；需要结合作者讨论和附录核对。
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 6. Limitations / 局限与复现注意
 
-## 7. 一句话定位
+专家标注 1445 句约需 110 人时、成本约 5500 美元，难以大规模扩展；医学文本类型、语言和文章领域有限；supporting sentence 标注仍存在医生间分歧，不能把自动 metric 的低 agreement 只归咎于模型。
 
-这篇论文把“Understanding Faithfulness and Reasoning of Large Language Models on Plain Biomedical Summaries”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+## 7. 两句话总结
+
+论文构建了 plain biomedical summary 的细粒度专家 faithfulness/reasoning 数据，发现更高抽象性和更高可读性都可能伴随事实不忠实。通用摘要指标在医学域迁移效果差，要求 evaluator 给证据和推理能改善判断，但专家标注成本和领域特异性仍是主要瓶颈。

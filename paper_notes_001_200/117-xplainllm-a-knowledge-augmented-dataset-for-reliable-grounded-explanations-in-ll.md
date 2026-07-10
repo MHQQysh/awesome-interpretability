@@ -1,64 +1,42 @@
 # 117. XplainLLM: A Knowledge-Augmented Dataset for Reliable Grounded Explanations in LLMs
 
-> 逐篇阅读记录：第 117 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：EMNLP 2024。重点是 why-choose/why-not-choice 结构化解释、知识图谱 grounding 与 debugger score。
 
 ## 0. 论文信息
 
-- **作者**：Zichen Chen, Jianda Chen, Ambuj K. Singh, Misha Sra
-- **发表 venue / date**：EMNLP / 2024/01
-- **正式页面**：[Paper](https://aclanthology.org/2024.emnlp-main.432)
-- **领域标签**：Rationale, Evaluation, Reasoning, Hallucination, Behavior, Detect
-- **本地 PDF 文本规模**：约 11,299 个词
+- **作者**：Zichen 等
+- **来源**：[EMNLP 2024](https://aclanthology.org/2024.emnlp-main.432)
+- **资源**：[XplainLLM](https://lmexplainer.github.io/xplainllm)
+- **主题**：grounded explanation、knowledge graph、解释可靠性
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决大模型幻觉或事实性错误难以定位、解释和诊断的问题。。方法上以Rationale为主线，结合论文摘要中的核心设定：Large Language Models (LLMs) have achieved remarkable success in natural language tasks, yet understanding their reasoning processes remains a significant challenge.We address this by introducing XplainLLM, a dataset acc
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+LLM 的 CoT 或 post-hoc rationale 读起来合理，却可能没有对应模型决策；attention visualization 也难以解释 why choose 与 why not choose。需要一个把答案、支持/反对因素、外部知识和质量分数统一起来的数据与生成框架。
 
-## 2. Introduction 讲解
+## 2. Method / Framework：怎么解决
 
-- **引言结构**：1 Introduction knowledge graphs (KGs) and Graph Attention Net-；3 XplainLLM: Dataset, Explanation；3. Accuracy: The correctness of the explanation havior of LLMs on CommonsenseQA dataset (Tal-；60 Our results show that performance variations；6 Conclusion；2024. Llm based multi-agent generation of semi- International Conference on Artificial Intelligence；2022. Training language models to follow instruc-；2021. Measuring association between labels and
-- **引言关键线索**：works (GAT) (Velic虒kovic虂 et al., 2018), we construct As the capabilities and applications of large lan- a structured and reliable dataset that anchors ex- guage models (LLMs) continue to expand (Liu planations in reasoning-relevant knowledge. We et al., 2023; Achiam et al., 2023; Touvron et al., link the LLM reasoning process to the entities 2023; Jiang et al., 2024), the need for transparency and relations within KGs to help provide an intu- and interpretability in their reasoning behavior has itive and interpretable representation of the LLM鈥檚 become increasingly urgent (Arrieta et al., 2020). decision-making process. Our process also helps Traditional methods (Ribeiro et al., 2016; Lundberg facilitate model tuning, debugging, robustness eval- and Lee, 2017; Casalicchio et al., 2019) allow us uation and demonstration in in-context learning. to get insights into the reasoning behind la
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+XplainLLM 实例包含 question-answer、why-choose explanation、why-not-choose explanation 和 debugger score。框架从 KG 中找与问题/答案相关的 nodes/edges，经 graph attention 或 prune/rank 选择解释依据，再由 explanation generator 生成 grounded text。
 
-## 3. Method / Framework 讲解
+why-choose 解释支持所选答案，why-not 解释说明其他候选为什么不选；debugger score 对 groundedness、coverage、quality 等维度打分，用于选择更可靠的 explanation。
 
-- **方法段落线索**：mains a significant challenge. We address this ing behavior primarily focus on the analysis of by introducing XplainLLM, a dataset accom- parameter changes (Clark et al., 2019; Jacovi et al., panying an explanation framework designed 2021; Bills et al., 2023) and chain-of-thought (CoT) to enhance LLM transparency and reliability. based self-explanation (Huang et al.; Li et al., Our dataset comprises 24,204 instances where 2023). Analysis of parameter changes bases the each instance interprets the LLM鈥檚 reasoning behavior using knowledge graphs (KGs) and explanations on self-attention weights in models graph attention networks (GAT), and includes like BERT (Kenton and Toutanova, 2019) and GPT- explanations of LLMs such as the decoder- 2 (Radford et al., 2019), deducing correlations be- only Llama-3 and the encoder-only RoBERTa. tween input tokens and the model鈥檚 predictions. XplainLLM also features a framework for gener- However, the rel
-- **方法与解释性关系**：该论文主要围绕 `Rationale, Evaluation, Reasoning, Hallucination, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+## 3. Baseline / 对比基线
 
-## 4. Baseline 与对比讲解
+neuron explanation、自由文本 explanation、CoT self-explanation、已有 explanation datasets；无 KG grounding 的 LLM rationale；不同 KG pruning/embedding/retrieval 方法。
 
-- **检测到的 baseline / comparison 关键词**：Table 1, Comparison of prevalent explanation, XplainLLM, Size, Figure 5, Accuracy comparison of vanilla, Overall score of 0.79, These high, We provide a comparison, The results from the, Comparison of Explanations, Vanilla vs, In particular, We compare the explanations
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - Table 1: Comparison of prevalent explanation datasets with XplainLLM, detailing instance count (Size), answer
-  - present a comparison with prevalent explanation tify critical influencing elements.
-  - edness of newly generated explanations and the 鈥淚n comparison to prior explanations,
-  - Figure 5: Accuracy comparison of vanilla version minating in an Overall score of 0.79. These high
-  - hallucinations. We provide a comparison example
-  - setting to ensure fair comparisons across different
+## 4. Experiments / Findings：结果如何读
 
-## 5. Experiments 与 Findings 讲解
+数据集覆盖 structured answer 与 natural language explanation，补足仅有标签或只解释最终答案的资源。人工评价显示 explanations 的平均质量约 0.89，自动评价约 1.00（具体维度依协议而异），且 why-choose/why-not 让用户更容易检查决策边界。
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - mains a significant challenge. We address this ing behavior primarily focus on the analysis of
-  - hallucinations and improve grounded explana- 2023).
-  - presents a significant barrier in applications where total of 24,204 instances are included in the dataset.
-  - framework, and the results show that LLMs under ods fail to accurately capture the core reasoning
-  - our framework outperform the benchmark, with a of LLMs. In contrast, our work enhances LLM
-  - To improve the understanding of generated ex-
-  - shows a significant agreement between the auto- tailed. The completeness of our explanations also
+KG grounding 减少纯语言模型的 hallucinated rationale，并允许把 explanation 追溯到结构化节点/边；但解释框架是受控生成，不等于对任意黑盒 LLM 内部机制完成 reverse engineering。
 
-## 6. Conclusion、局限与可复现性
+## 5. Ablation / 机制解释
 
-- **结论段落线索**：processes. supported by funding from the National Science Foundation under grant #IIS-2229876.
-- **局限/未来工作线索**：clude five LLMs: GPT-3.5-turbo (Brown et al., likely due to limitations in their inherent ability；guide the LLMs toward a more grounded and data- inaccuracies. It is essential for future work to con-；Limitation onomies, opportunities and challenges toward respon-；we acknowledge potential limitations in our dataset. ing, Henk Tillman, Leo Gao, Gabriel Goh,
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+比较有无 KG、不同 explanation retrieval、debugger score 选择以及 why-choose/why-not 的组合；结果支持外部知识和结构化解释共同提升可靠性，而单独增加文本长度未必有益。
 
-## 7. 一句话定位
+## 6. Limitations / 局限与复现注意
 
-这篇论文把“XplainLLM: A Knowledge-Augmented Dataset for Reliable Grounded Explanations in LLMs”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+KG 覆盖不全或有偏时会把错误知识变成“grounded”解释；自动/LLM evaluator 可能过度打高分；数据任务与答案格式受控，真实开放生成需要更多验证。
+
+## 7. 两句话总结
+
+XplainLLM 用 KG 约束 why-choose/why-not explanations，并提供 debugger score，目标是让 LLM 解释既可读又能追溯证据。实验说明结构化 grounding 比自由 rationale 更可靠，但 KG 的完整性和 evaluator 偏差仍决定最终可信度。
