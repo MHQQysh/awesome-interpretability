@@ -37,6 +37,7 @@
 | 371-380 | 已完成 | 已逐篇读取可获得全文；371 为高光谱 Mamba 邻近工作，明确记录其不属于 LLM 主线；其余覆盖机器人规划、LVLM、LLM judge、日志分析、时序 survey、hallucination 理论、哲学综述和推荐解释 |
 | 381-390 | 已完成 | 已逐篇读取可获得全文；381 受出版商/开放仓储访问保护，明确记录摘要/索引证据边界；其余覆盖隐私推理、入侵检测 survey、信任评估、哲学机制解释、质性编码、rationale 忠实性、对抗性解释、EEG foundation model、semantic hub 和 unlearning |
 | 391-400 | 已完成 | 已逐篇读取本地全文，覆盖 ReFT 表示微调、视觉生成评测、LLM 不确定性、内部一致性、QA-Emb 可解释表示、LLM 安全、latent steering 和 ICL-episodic memory |
-| 401-500 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
+| 401-410 | 已完成 | 已逐篇读取本地全文，覆盖训练数据 influence/fact tracing、密码学后门、GAMformer、自动 circuit discovery、ChatGPT IE faithfulness、grokking progress、SAE feature、circuit scaling、activation patching 和 tuned lens |
+| 411-500 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
 
 > 这里的“已完成”指已逐篇检查论文正文，而不是只根据标题或摘要生成模板。
