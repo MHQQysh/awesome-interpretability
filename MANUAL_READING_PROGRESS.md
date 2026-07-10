@@ -42,6 +42,10 @@
 | 421-430 | 已完成 | 已逐篇读取本地全文，覆盖 Tracr ground-truth compiler、事实一致性、circuit probing、hallucination surveys、adversarial hallucination、self-contradiction、CLIP explainability 和 low-confidence validation |
 | 431-440 | 已完成 | 已逐篇读取本地 PDF，覆盖 LVLM/MLLM object hallucination 的 LURE/Woodpecker、LLM PII leakage、医学自我反思、CoT gradient attribution、问题分解与 faithfulness、水印 source attribution、ActAdd、作者归属流派和 stylometry |
 | 441-450 | 已完成 | 已逐篇读取本地 PDF，覆盖 DIT 道德推理、Transformer topic learning、Attention Lens、in-context probing、分布式 interpretability 基础设施、LLM self-explanation、ViT class embedding、CoT 不忠实解释、自动驾驶自然语言解释和 executable Faithful CoT |
-| 451-500 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
+| 451-460 | 已完成 | 已逐篇读取本地 PDF，覆盖 greater-than circuit、intrinsic Transformer Programs、心理健康 LLM 风险、transient ICL、KG 路径忠实推荐、VISIT 信息流、跨任务 circuit reuse、DeepDecipher、编程错误解释和 Multimodal-CoT |
+| 461-470 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
+| 471-480 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
+| 481-490 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
+| 491-500 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
 
 > 这里的“已完成”指已逐篇检查论文正文，而不是只根据标题或摘要生成模板。
