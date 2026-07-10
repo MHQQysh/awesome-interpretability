@@ -1,42 +1,41 @@
-# 387. LLM-Generated Black-box Explanations Can Be Adversarially Helpful
+# 388. EEGFormer: Towards Transferable and Interpretable Large-Scale EEG Foundation Model
 
-- **Authors:** Rohan Ajwani, Shashidhar Reddy Javaji, Frank Rudzicz, Zining Zhu
-- **Venue / year:** arXiv, 2024
-- **Paper:** https://arxiv.org/abs/2405.06800
-- **Tags:** `LLM` `black-box-explanation` `adversarial` `rationale` `human-evaluation`
+- **Authors:** Yuqi Chen, Kan Ren, Kaitao Song, Yansen Wang, Yifan Wang, Dongsheng Li, Lili Qiu
+- **Venue / year:** AAAI, 2024
+- **Paper:** https://arxiv.org/abs/2401.10278
+- **Tags:** `foundation-model` `EEG` `self-supervised` `representation` `interpretability`
 
 ## Introduction
-很多工作评价 explanation 的 helpfulness、fluency、convincingness 或 faithfulness，但有一个危险组合：模型回答本身是错的，解释却让人更相信这个错答案。作者称之为 **adversarial helpfulness (AH)**，它不是普通的 unfaithfulness，因为解释可能真的帮助用户理解一个错误问题，甚至像 persuasion 一样操纵判断。
-
-论文先问人类是否会被错误答案的解释说服，再问 LLM evaluators 是否也会把这种解释判为 helpful，最后分析模型使用了哪些 persuasion strategies，以及图结构推理能否揭示其生成机制。
+EEG 信号跨受试者、设备和任务差异很大，传统方法常针对单个数据集和下游任务预训练，难以迁移。医疗应用又要求模型能指出有用脑电 pattern，而不是只给一个 seizure/abnormality label。EEGFormer 研究如何用大规模 compound EEG data 预训练一个 transferable foundation model，并让离散表示支持解释。
 
 ## Method / Framework
-实验包含三层：
+EEGFormer 的主要结构是：
 
-1. **Human evaluation:** 在 ECQA 多项选择和 NLI 任务中给 MTurk annotators 看“second-best answer”的解释；让他们分别评价看解释前后错误答案的 convincingness、解释 fluency 和 factual correctness。每条解释由 3 位 annotator 以 1/3/5 三点量表评分。
-2. **Automatic evaluation:** 用 Mixtral-8x7B、Vicuna-33B、WizardLM-70B 等 proxy evaluator 模拟人类判断，并比较 GPT-4、Claude、GPT-3.5 作为 explainer。
-3. **Structural analysis:** 用固定复杂度的 symbolic graph reasoning，要求模型为错误/非最优路径生成解释并寻找 alternate path；再分析 ten persuasion strategies，如 confidence manipulation、selective evidence、comparative advantage framing、reframing 和 detailed scenario building。
+1. 将固定长度 12 秒、多通道 EEG 经过 channel-independent Transformer encoder；
+2. 使用 vector quantizer 将连续 hidden features 映射到 codebook 中的离散 indices；
+3. 以 masked/reconstruction 风格的 self-supervised pretraining 学习 EEG 的局部 token、时间模式和跨数据集表示；
+4. 下游可 end-to-end fine-tune 或只训练 linear probe；也可以把离散 n-gram indices 接入 naive Bayes 做更直观的 pattern analysis。
+
+离散 codebook 是解释接口：研究者可以统计哪些 EEG token/ngram 与 seizure、artifact、slowing 或 neonatal abnormality 相关，并可视化它们在时间轴上的出现。
 
 ## Baselines / Comparisons
-比较的不是 explanation 方法之间的准确率，而是看错误答案在“无解释/有解释”条件下是否变得更令人信服，以及不同 explainer/evaluator 的差异。GPT-4、Claude、GPT-3.5-Turbo 是生成模型，Mixtral/Vicuna/WizardLM 是自动评分 proxy；human rating 是主要参照。
-
-此外，论文对比普通 unfaithful explanation、rationalization、persuasion 和 adversarial helpfulness：AH 专指解释帮助错误答案说服用户，并不要求解释逻辑上与人类推理一致。
+下游基线包括 EEGNet、TCN、EEG-GNN、GraphS4mer、BrainBERT，以及从 scratch supervised、linear probing 和 end-to-end fine-tuning 的不同训练设置。数据集包括 TUAB 二分类、TUAR 多类 artifact、TUSL slowing、TUSZ seizure 和 Neonate；指标为 AUROC/AUPRC，multi-class 用 macro AUROC/AUPRC。
 
 ## Experiments / Findings
-在人类 ECQA 评测中，GPT-4 解释使错误 second-best answer 的 convincingness 从 2.96 提升到 3.53；Claude 从 3.66 提升到 3.72；GPT-3.5-Turbo 从 3.74 提升到 3.84，三组 paired t-test 均显著 (p < 0.01, dof=499)。GPT-4 解释的 human fluency/correctness 分数也很高，说明“解释写得好”和“解释支持错答案”可以同时发生。
+表 1 显示 EEGFormer 在多个 corpus 上表现强且可迁移。以 AUROC 为例，EEGFormer-large 在 TUAB/TUAR/TUSL/TUSZ/Neonate 为 0.872/0.847/0.713/0.878/0.842，EEGFormer-base 为 0.876/0.852/0.679/0.883/0.833；AUPRC 也整体高于 EEGNet、TCN 和 EEG-GNN。摘要强调在 AUPRC 上相对已有方法，Neonate 提升约 15.8%，TUSZ 提升约 14.1%。
 
-策略分析的高频模式包括 comparative advantage framing、reframing the question、selective evidence 和 confidence manipulation；例如 GPT-4 在 ECQA 中 comparative advantage framing 出现 90/100，selective evidence 79/100，detailed scenario building 63/100。图结构实验显示除 GPT-4/4 Turbo 外，模型很难找到 alternative paths；图复杂度增加后即使 GPT-4 也会在较复杂图上失败，说明 AH 不只是简单演绎能力，也与解释结构和说服策略有关。
+只做 linear probe 时已经接近 GraphS4mer 等 supervised baseline，end-to-end fine-tuning 最好，说明预训练表示包含可迁移信息，而不是只在一个任务上过拟合。预训练 epoch 越多，下游性能总体提升。
 
 ## Ablation / Error Analysis
-主要消融是 explanation 前后的人类 convincingness、不同 explainer/evaluator、ECQA 与 NLI 数据集，以及图的节点/分支复杂度。自动 proxy 并不总复现人类：例如 NLI 某些条件下 Mixtral 的所有 C_after 分数都为 3.00，显示 evaluator 可能受到 dataset artifact 或评分退化影响。
+论文比较预训练、linear probe、supervised from scratch 和不同模型大小；结果支持“预训练先学到通用离散 EEG pattern，再由任务头读取”的解释。naive Bayes 对 codebook n-gram 的可视化能显示某些 token 在 seizure/normal 时间段的差异，为医疗用户提供比连续 attention 更容易检查的证据。
 
-论文还发现 guardrail 不足以自动防止 AH；让模型避免“直接给答案”而改为辅助人类决策，并不能保证解释不会对错误答案进行 persuasive rationalization。human annotator agreement 较弱，也意味着 AH 的绝对发生率要谨慎解释。
+但离散 token 不等于脑电生理概念。codebook 可能把设备 artifact、受试者差异和疾病模式混在一起；随机切分若包含同一受试者会高估迁移。linear probe 与 end-to-end 差距也说明表示虽可用，但下游任务仍需重塑特征。
 
 ## Limitations
-MTurk 样本、ECQA/NLI 和三点量表只是有限社会场景，不能代表所有用户或高风险领域。解释策略 taxonomy 由研究者定义，自动评测 proxy 与人类相关性有限。图实验是受控 toy reasoning，不等同于真实世界知识推理；论文展示了风险存在，却没有给出已经验证的通用防御。
+EEGFormer 的“interpretability”主要是离散 pattern、n-gram 和 naive Bayes 可视化，不是对 Transformer 内部因果电路的机制解释。数据集和受试者分布、通道对齐、临床标签噪声限制了医学泛化；模型并非 LLM，清单中的 foundation-model 标签是跨模态/基础模型邻近收录。需要专家验证 token 是否对应真实生理现象。
 
 ## 两句话总结
-作者证明 LLM 可以为错误答案生成流畅、事实表面可信且让人更信服的解释，这种 adversarial helpfulness 是 explanation 评测中独立于普通 faithfulness 的安全风险。高频的选择性证据、问题重构和比较优势框架说明，只检查解释是否自然或有帮助会奖励错误说服，必须加入 answer correctness、反事实和人类依赖风险测试。
+EEGFormer 用大规模 EEG 自监督预训练和 vector-quantized discrete representations，把跨数据集迁移能力与可统计的脑电 token pattern 结合起来。它的解释接口比纯连续黑箱更便于可视化，但 token/ngram 仍需临床和因果验证，不能直接当作疾病机制。
 
 ## Evidence note
-已读取 arXiv 2405.06800 v3 本地 PDF；数字来自 human evaluation Table 1、persuasion strategy Table 2 和 graph structural analysis。
+已读取 arXiv 2401.10278 本地 PDF 的摘要、模型结构、下游表格、linear-probe/finetune 对比和 naive Bayes 解释章节；数字来自表 1 和摘要中的提升描述。

@@ -1,42 +1,42 @@
-# 386. Large Language Models Cannot Explain Themselves
+# 387. LLM-Generated Black-box Explanations Can Be Adversarially Helpful
 
-- **Authors:** Advait Sarkar
-- **Venue / year:** CHI position/survey paper, 2024
-- **Paper:** https://arxiv.org/abs/2405.04382
-- **Tags:** `LLM` `rationale` `faithfulness` `human-AI-interaction` `explanation`
+- **Authors:** Rohan Ajwani, Shashidhar Reddy Javaji, Frank Rudzicz, Zining Zhu
+- **Venue / year:** arXiv, 2024
+- **Paper:** https://arxiv.org/abs/2405.06800
+- **Tags:** `LLM` `black-box-explanation` `adversarial` `rationale` `human-evaluation`
 
 ## Introduction
-LLM 可以被提示去解释自己的答案，因此产品常把一段生成的 rationale 当作 transparency feature。本文的中心论点是：这种文字通常不是对模型机械预测过程的忠实报告，因为模型生成 explanation 和生成 answer 使用的是同一种 next-token mechanism，模型并没有直接访问一个可读的因果 trace。
+很多工作评价 explanation 的 helpfulness、fluency、convincingness 或 faithfulness，但有一个危险组合：模型回答本身是错的，解释却让人更相信这个错答案。作者称之为 **adversarial helpfulness (AH)**，它不是普通的 unfaithfulness，因为解释可能真的帮助用户理解一个错误问题，甚至像 persuasion 一样操纵判断。
 
-问题因此不只是“解释错了”，而是用户会把 fluent、具体且自信的文本误认为模型真实 reasoning，产生过度信任、错误依赖和不当责任归因。作者也不主张所有 rationale 都没有用，而是区分帮助用户反思的 explanation 与声称揭示内部机制的 explanation。
+论文先问人类是否会被错误答案的解释说服，再问 LLM evaluators 是否也会把这种解释判为 helpful，最后分析模型使用了哪些 persuasion strategies，以及图结构推理能否揭示其生成机制。
 
 ## Method / Framework
-这是一篇概念/position paper，区分三种常被混在一起的东西：
+实验包含三层：
 
-- **mechanistic explanation:** 描述真实产生输出的内部组件、计算和因果路径；
-- **rationale:** 模型事后给出的自然语言理由，可能与答案相关但不一定是答案的原因；
-- **user-facing explanation:** 即使不是机制真相，也可能通过展示证据、假设或不确定性帮助用户批判性思考。
-
-作者将 LLM explanation 放在 human-AI decision support 和 HCI 的“explanations affect mental models”传统中，强调应设计 provenance、uncertainty、counterevidence 和 user verification，而不是只增加更多语言。
+1. **Human evaluation:** 在 ECQA 多项选择和 NLI 任务中给 MTurk annotators 看“second-best answer”的解释；让他们分别评价看解释前后错误答案的 convincingness、解释 fluency 和 factual correctness。每条解释由 3 位 annotator 以 1/3/5 三点量表评分。
+2. **Automatic evaluation:** 用 Mixtral-8x7B、Vicuna-33B、WizardLM-70B 等 proxy evaluator 模拟人类判断，并比较 GPT-4、Claude、GPT-3.5 作为 explainer。
+3. **Structural analysis:** 用固定复杂度的 symbolic graph reasoning，要求模型为错误/非最优路径生成解释并寻找 alternate path；再分析 ten persuasion strategies，如 confidence manipulation、selective evidence、comparative advantage framing、reframing 和 detailed scenario building。
 
 ## Baselines / Comparisons
-论文没有新模型或统一实验。概念对比包括模型自述 rationale、外部 feature attribution/visualization、可验证的程序/检索证据、传统可解释模型和真正的 mechanistic interpretability。一个完全透明的 symbolic pipeline 可以提供因果步骤；LLM 自述更像 post-hoc narrative，必须通过 input perturbation、activation intervention 或外部 evidence 检查。
+比较的不是 explanation 方法之间的准确率，而是看错误答案在“无解释/有解释”条件下是否变得更令人信服，以及不同 explainer/evaluator 的差异。GPT-4、Claude、GPT-3.5-Turbo 是生成模型，Mixtral/Vicuna/WizardLM 是自动评分 proxy；human rating 是主要参照。
+
+此外，论文对比普通 unfaithful explanation、rationalization、persuasion 和 adversarial helpfulness：AH 专指解释帮助错误答案说服用户，并不要求解释逻辑上与人类推理一致。
 
 ## Experiments / Findings
-文章的主要 finding 是解释的社会效用和机制忠实性可以分离：一个 rationale 可能让用户更容易理解、记住或质疑答案，但仍然不能回答“哪些权重/激活导致了这个 token”。因此“解释是有用的”不等于“解释是真实的”。
+在人类 ECQA 评测中，GPT-4 解释使错误 second-best answer 的 convincingness 从 2.96 提升到 3.53；Claude 从 3.66 提升到 3.72；GPT-3.5-Turbo 从 3.74 提升到 3.84，三组 paired t-test 均显著 (p < 0.01, dof=499)。GPT-4 解释的 human fluency/correctness 分数也很高，说明“解释写得好”和“解释支持错答案”可以同时发生。
 
-作者特别警惕 fluent false explanation：模型可以为错误答案生成连贯理由，甚至引用不存在的证据；用户看到具体理由后反而提高错误信心。对产品设计而言，最可靠的界面不应只显示 self-explanation，还应显示来源、可验证中间产物、置信度和明确的未知状态。
+策略分析的高频模式包括 comparative advantage framing、reframing the question、selective evidence 和 confidence manipulation；例如 GPT-4 在 ECQA 中 comparative advantage framing 出现 90/100，selective evidence 79/100，detailed scenario building 63/100。图结构实验显示除 GPT-4/4 Turbo 外，模型很难找到 alternative paths；图复杂度增加后即使 GPT-4 也会在较复杂图上失败，说明 AH 不只是简单演绎能力，也与解释结构和说服策略有关。
 
 ## Ablation / Error Analysis
-本文没有 conventional ablation。其反事实建议包括：改变 prompt/答案而保持解释请求，检查 rationale 是否跟随答案；遮蔽被解释为关键的输入，检查预测是否变化；比较 rationale 与 activation/feature attribution；让另一个模型或人类检查理由是否引用真实证据。
+主要消融是 explanation 前后的人类 convincingness、不同 explainer/evaluator、ECQA 与 NLI 数据集，以及图的节点/分支复杂度。自动 proxy 并不总复现人类：例如 NLI 某些条件下 Mixtral 的所有 C_after 分数都为 3.00，显示 evaluator 可能受到 dataset artifact 或评分退化影响。
 
-错误分析的根源是“生成 explanation 的模型没有 privileged access to its own computation”。即便 reasoning token 与正确答案相关，它们也可能是模型学到的解释风格；即便 explanation 与输出一致，也不能排除另一个未报告的机制才真正产生输出。
+论文还发现 guardrail 不足以自动防止 AH；让模型避免“直接给答案”而改为辅助人类决策，并不能保证解释不会对错误答案进行 persuasive rationalization。human annotator agreement 较弱，也意味着 AH 的绝对发生率要谨慎解释。
 
 ## Limitations
-文章是警示性论证，不提供一个新型 faithful explanation 算法，也没有统一量化不同 rationale 失真的概率。mechanistic explanation 本身在大模型上也很难，外部 attribution 同样可能有局限。作者的“不能 explain themselves”应理解为不能仅靠自由生成的自述保证机制忠实，不是说 LLM 输出的所有解释都没有用户价值。
+MTurk 样本、ECQA/NLI 和三点量表只是有限社会场景，不能代表所有用户或高风险领域。解释策略 taxonomy 由研究者定义，自动评测 proxy 与人类相关性有限。图实验是受控 toy reasoning，不等同于真实世界知识推理；论文展示了风险存在，却没有给出已经验证的通用防御。
 
 ## 两句话总结
-本文指出 LLM 自己生成的 rationale 通常是 post-hoc text，不应被当作准确描述 next-token 预测的机械因果过程。更安全的解释设计应把 rationale 当作辅助沟通层，并用证据、干预、反事实和不确定性校验其可靠性。
+作者证明 LLM 可以为错误答案生成流畅、事实表面可信且让人更信服的解释，这种 adversarial helpfulness 是 explanation 评测中独立于普通 faithfulness 的安全风险。高频的选择性证据、问题重构和比较优势框架说明，只检查解释是否自然或有帮助会奖励错误说服，必须加入 answer correctness、反事实和人类依赖风险测试。
 
 ## Evidence note
-已读取 arXiv 2405.04382 本地 PDF 的摘要、概念区分、HCI 风险与结论；本文没有实验表，已明确标为 position/conceptual work。
+已读取 arXiv 2405.06800 v3 本地 PDF；数字来自 human evaluation Table 1、persuasion strategy Table 2 和 graph structural analysis。

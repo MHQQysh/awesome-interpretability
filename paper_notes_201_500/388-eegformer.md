@@ -1,41 +1,44 @@
-# 388. EEGFormer: Towards Transferable and Interpretable Large-Scale EEG Foundation Model
+# 389. The Semantic Hub Hypothesis: Language Models Share Semantic Representations Across Languages and Modalities
 
-- **Authors:** Yuqi Chen, Kan Ren, Kaitao Song, Yansen Wang, Yifan Wang, Dongsheng Li, Lili Qiu
-- **Venue / year:** AAAI, 2024
-- **Paper:** https://arxiv.org/abs/2401.10278
-- **Tags:** `foundation-model` `EEG` `self-supervised` `representation` `interpretability`
+- **Authors:** Zhaofeng Wu, Xinyan Yu, Dani Yogatama, Jiasen Lu, Yoon Kim
+- **Venue / year:** ICLR, 2025
+- **Paper:** https://arxiv.org/abs/2411.04986
+- **Tags:** `mechanistic-interpretability` `representation` `multilingual` `multimodal` `logit-lens` `causal-intervention`
 
 ## Introduction
-EEG 信号跨受试者、设备和任务差异很大，传统方法常针对单个数据集和下游任务预训练，难以迁移。医疗应用又要求模型能指出有用脑电 pattern，而不是只给一个 seizure/abnormality label。EEGFormer 研究如何用大规模 compound EEG data 预训练一个 transferable foundation model，并让离散表示支持解释。
+一个模型如何用同一套参数处理英语、中文、代码、算术、图像和音频？一种可能是为每种数据类型分配互不相干的子空间；另一种可能是先把不同表面形式编码到一个共享语义空间，再在其中计算，最后投影回输出形式。本文称后者为 **semantic hub hypothesis**，借用了认知科学中跨模态语义 hub 的概念。
+
+核心可解释性问题是：中间 hidden states 是否真的让语义相同的不同模态/语言靠近，以及这个共享空间是否会因果影响后续输出，而不只是训练数据带来的统计副产物。
 
 ## Method / Framework
-EEGFormer 的主要结构是：
+作者在多个模型/数据类型上做三类分析：
 
-1. 将固定长度 12 秒、多通道 EEG 经过 channel-independent Transformer encoder；
-2. 使用 vector quantizer 将连续 hidden features 映射到 codebook 中的离散 indices；
-3. 以 masked/reconstruction 风格的 self-supervised pretraining 学习 EEG 的局部 token、时间模式和跨数据集表示；
-4. 下游可 end-to-end fine-tune 或只训练 linear probe；也可以把离散 n-gram indices 接入 naive Bayes 做更直观的 pattern analysis。
+1. **Relative representation similarity:** 对语义等价的跨语言、跨模态输入与不相关输入比较中间层 hidden states 的 cosine similarity。比较相对相似度而不是高维空间中的绝对距离。
+2. **Logit lens interpretation:** 在中间层把 hidden state 通过 unembedding 映射为 token distribution，检验 dominant pretraining language（通常英语）的 continuation 是否比原输入语言/模态的 token 更接近。该方法 training-free，但只适合短 verbalization。
+3. **Causal intervention:** 用 Activation Addition、hidden-state replacement 或 token steering，在 dominant English representation 上干预中文/西班牙语、算术、代码、图像和音频输入，观察目标输出是否按语义对应方向改变。
 
-离散 codebook 是解释接口：研究者可以统计哪些 EEG token/ngram 与 seizure、artifact、slowing 或 neonatal abnormality 相关，并可视化它们在时间轴上的出现。
+模型包括 Llama-2/Llama-3、LLaVA 视觉语言模型、Chameleon，以及 SALMONN 音频语言模型；数据包含翻译句、算术表达式、代码调用、图像 caption/segmentation 和 VGGSound audio labels。
 
 ## Baselines / Comparisons
-下游基线包括 EEGNet、TCN、EEG-GNN、GraphS4mer、BrainBERT，以及从 scratch supervised、linear probing 和 end-to-end fine-tuning 的不同训练设置。数据集包括 TUAB 二分类、TUAR 多类 artifact、TUSL slowing、TUSZ seizure 和 Neonate；指标为 AUROC/AUPRC，multi-class 用 macro AUROC/AUPRC。
+基线是语义不匹配的输入 pair、随机 caption/label、原始不干预生成，以及在 input language 而非 dominant English 中做 steering。论文也与需要显式线性映射的跨模型 text-vision/audio alignment 和 cross-lingual embedding 工作区分：本文主张同一个多数据类型 LM 内部已经形成共享空间，不需额外 alignment transformation。
+
+评价包含 representation similarity、logit-lens token preference、sentiment mean、perplexity/disfluency、continuation relevance、算术/代码/视觉/音频 steering success rate。
 
 ## Experiments / Findings
-表 1 显示 EEGFormer 在多个 corpus 上表现强且可迁移。以 AUROC 为例，EEGFormer-large 在 TUAB/TUAR/TUSL/TUSZ/Neonate 为 0.872/0.847/0.713/0.878/0.842，EEGFormer-base 为 0.876/0.852/0.679/0.883/0.833；AUPRC 也整体高于 EEGNet、TCN 和 EEG-GNN。摘要强调在 AUPRC 上相对已有方法，Neonate 提升约 15.8%，TUSZ 提升约 14.1%。
+结果显示 semantically matching 的跨语言/跨模态输入在中间层更相似，且 hidden states 经常更接近 dominant English 的语义 continuation。例如 Llama-3 处理中文、算术和代码时，logit lens 常显示英语 token；LLaVA/SALMONN 的视觉/音频表示也更接近英文标签。
 
-只做 linear probe 时已经接近 GraphS4mer 等 supervised baseline，end-to-end fine-tuning 最好，说明预训练表示包含可迁移信息，而不是只在一个任务上过拟合。预训练 epoch 越多，下游性能总体提升。
+干预结果支持因果性：Llama-3 中用英语 Good/Bad steering 中文或西班牙语输入的 sentiment 效果与在输入语言中 steering 相近，同时 relevance 保持稳定；算术和代码用英语语义向量可以改变对应结果；LLaVA 图像 hidden-state replacement 的颜色回答成功率最高超过 80%；SALMONN 音频也能被英文动物词方向 steer。作者因此认为 semantic hub 被后续层实际使用，而不只是“英文训练造成的相似表征”。
 
 ## Ablation / Error Analysis
-论文比较预训练、linear probe、supervised from scratch 和不同模型大小；结果支持“预训练先学到通用离散 EEG pattern，再由任务头读取”的解释。naive Bayes 对 codebook n-gram 的可视化能显示某些 token 在 seizure/normal 时间段的差异，为医疗用户提供比连续 attention 更容易检查的证据。
+论文比较不同层、不同 steering strength、English vs input-language intervention、matching vs random label/caption，以及 Llama-2/Llama-3。干预太弱无法改变输出，太强会损伤流畅度/相关性；某些视觉模型本身识别颜色能力弱，因此视觉干预结果需区分 baseline recognition failure 与 steering success。
 
-但离散 token 不等于脑电生理概念。codebook 可能把设备 artifact、受试者差异和疾病模式混在一起；随机切分若包含同一受试者会高估迁移。linear probe 与 end-to-end 差距也说明表示虽可用，但下游任务仍需重塑特征。
+作者承认 logit lens 可能把语言 embedding alignment 误读为完整语义理解，尤其英语与目标语言共享结构时；图像/音频干预还存在替换多个 patch、特殊 token 和分布外 hidden state 等 confound。跨类型 steering 有效是因果证据，但不等于 hub 是单一、可定位的神经模块。
 
 ## Limitations
-EEGFormer 的“interpretability”主要是离散 pattern、n-gram 和 naive Bayes 可视化，不是对 Transformer 内部因果电路的机制解释。数据集和受试者分布、通道对齐、临床标签噪声限制了医学泛化；模型并非 LLM，清单中的 foundation-model 标签是跨模态/基础模型邻近收录。需要专家验证 token 是否对应真实生理现象。
+实验使用短句、可控标签和几个开源模型，不能直接覆盖开放世界长文本和所有模态。cosine similarity 与 logit lens 都是 probe，不是独立的语义 ground truth；干预向量由 unembedding/activation 构造，也可能利用表面词向量结构。共享表示的具体边界、层间形成过程及对更大闭源模型的适用性仍未确定。
 
 ## 两句话总结
-EEGFormer 用大规模 EEG 自监督预训练和 vector-quantized discrete representations，把跨数据集迁移能力与可统计的脑电 token pattern 结合起来。它的解释接口比纯连续黑箱更便于可视化，但 token/ngram 仍需临床和因果验证，不能直接当作疾病机制。
+本文用跨语言/跨模态表示相似度、logit lens 和 activation intervention 证明多数据类型 LM 中存在由 dominant language 锚定的共享 semantic hub，并且干预该空间能预测性地改变其他模态输出。它把“模型在英语空间中思考”的直觉推进到因果证据，但 probe 与 steering 的 confound 仍要求更细粒度的机制分解。
 
 ## Evidence note
-已读取 arXiv 2401.10278 本地 PDF 的摘要、模型结构、下游表格、linear-probe/finetune 对比和 naive Bayes 解释章节；数字来自表 1 和摘要中的提升描述。
+已读取 ICLR 2025/arXiv 2411.04986 v3 本地 PDF；关键结果来自中间层 similarity、Table 1 sentiment steering、算术/代码/视觉/音频 intervention 章节与附录对照实验。

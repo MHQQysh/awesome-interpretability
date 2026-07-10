@@ -1,45 +1,45 @@
-# 384. A Philosophical Introduction to Language Models -- Part II: The Way Forward
+# 385. Scalable Qualitative Coding with LLMs: Chain-of-Thought Reasoning Matches Human Performance in Some Hermeneutic Tasks
 
-- **Authors:** Raphaël Millière, Cameron Buckner
+- **Authors:** Zackary Okun Dunivin
 - **Venue / year:** arXiv, 2024
-- **Paper:** https://arxiv.org/abs/2405.03207
-- **Tags:** `survey` `mechanistic-interpretability` `causal-intervention` `philosophy` `multimodal`
+- **Paper:** https://arxiv.org/abs/2401.15170
+- **Tags:** `LLM` `qualitative-coding` `CoT` `human-evaluation` `rationale`
 
 ## Introduction
-Part I 讨论 LLM 与经典语言/认知哲学争论的连续性；Part II 转向当前研究正在产生的新问题，尤其是如何从行为描述走向内部机制理解。文章把 benchmark 的 saturation、gamification、contamination 和 construct validity 作为出发点，主张高分不能决定模型是否拥有某个人类能力。
+Qualitative coding/content analysis 将段落文本按 codebook 中的类别标注，过去依赖熟悉领域的研究者逐段解释。难点不是关键词匹配，而是密集段落中的隐含主题、语境和社会历史意义；人工团队规模有限，难以分析大语料。本文研究 GPT-4/3.5 能否在不牺牲人类级 coding fidelity 的情况下扩展这种 hermeneutic task。
 
-它进一步讨论 multimodality、agency、consciousness、secrecy/reproducibility，以及 LLM 是否能作为人类/动物认知模型。对可解释性而言，中心转折是：要解释模型，不是重新描述 next-token prediction，而是找到能通过干预改变行为的因果机制。
+作者特别关注 codebook 如何为 LLM 重写，以及让模型给出 rationale 的 chain-of-thought 是否提高和解释 coding 决定，而不是只让模型吐一个 label。
 
 ## Method / Framework
-这是一篇哲学与研究议程综述，方法框架包括：
+研究流程包括：
 
-- **mechanistic explanation:** 分解实体、活动、因果交互和组织结构，区别于只描述输入输出的 phenomenological explanation；
-- **causal intervention:** activation patching、steering、representation probing、toy model 和跨层/跨模态干预，用行为变化检验内部结构是否真正被使用；
-- **benchmark critique:** 检查饱和、数据污染、shortcut/gamification 和 construct validity；
-- **system-level questions:** 将单一语言模型扩展到视觉/音频模块、工具、agentic loops 和社会部署，再讨论可解释性与复现。
+1. 使用一组社会历史研究中的 dense paragraph passages 和 9 个 codes，建立 human-derived gold standard。
+2. 将人类 codebook 改写为适合 LLM 的定义、正例/反例、边界和输出格式，进行 zero-shot coding。
+3. 比较 GPT-4 和 GPT-3.5，并比较只输出标签与要求 rationale/CoT 的 prompt。
+4. 用 Cohen's kappa 与 human gold/intercoder agreement 比较模型；同时总结 prompt/codebook 设计 best practices。
 
-作者把 mechanistic interpretability 与 feature attribution、模型行为解释和人类心理解释区分开：前者要回答哪些内部组件如何产生现象，并且 ideally 支持 manipulation。
+解释在这里有双重角色：它既是对 coding 判定的可读理由，也可能通过迫使模型展开中间判断来提高 fidelity。但作者没有证明 CoT 文本逐步对应真实内部计算。
 
 ## Baselines / Comparisons
-主要比较是 behavioral benchmark vs mechanistic evidence、performance vs competence、black-box explanation vs causal explanation、单模态模型 vs modular/multimodal system。人类 baseline 不能直接作为 LLM 的认知能力标准，因为人类完成任务的机制假设未必适用于模型。
+主要 baseline 是 human-derived gold standard、human coder agreement、GPT-3.5 和 GPT-4 的不同 prompt。任务不与简单 bag-of-words/传统 classifier 做主对比，因为目标是高语境解释；公平性来自相同 passages、相同 codebook 和相同 zero-shot 条件。
 
-文章把 memorization/benchmark contamination 当作低级 baseline explanation：在宣称 ToM、reasoning 或 language understanding 前，应先证明模型不是记忆题目或利用表面关联。它还警惕把 attention heatmap、语言 rationale 或完整数学函数描述误当作机制。
+评价使用 Cohen's kappa：约 0.60 视为 substantial，约 0.75 以上视为 excellent。作者还比较 codebook 原始人类版与经过 LLM 任务重写版，以及是否明确要求 reasoning。
 
 ## Experiments / Findings
-Part II 不提出新的统一实验，但总结的 finding 很具体：基准测试会因竞争而被 gamed，GPT-4 在未污染/轻微变体上可能显著掉点；因此 construct validity 和机制证据决定了能力解释的可信度。
+GPT-4 在 9 个 code 中有 8 个达到 substantial agreement (kappa >= 0.6)，其中 3 个达到 excellent agreement (kappa >= 0.79/约 0.75 以上)。GPT-3.5 在相同 prompt 下平均 kappa 只有 0.34，最高约 0.55，明显低于 GPT-4。
 
-文章回顾 causal intervention 的意义：如果在中间层修改一个被认为代表某概念的表示，目标输出发生可预测改变，且不破坏无关能力，这比单纯相关性更支持机制假设。多模态和模块化系统则要求研究跨模态表示接口、工具调用和 agency，而不能只分析语言 backbone。
+加入 rationale/CoT 后 coding fidelity 显著提高，说明让模型把 codebook 条件应用到文本并说明理由，比只要求一个类别更稳定。作者据此认为在部分 codebook 上 GPT-4 已能进行人类级大规模内容分析，研究者可以把时间投入到 codebook 设计、边界案例和更具创造性的工作。
 
 ## Ablation / Error Analysis
-文中建议的反事实/消融包括：用未见过的 benchmark 变体排除 contamination；对组件、层和表示做 activation ablation/patching；比较自然语言引导和隐向量干预；检查改变一个机制是否只影响目标行为而非所有输出；在不同模态和模型规模上复现。
+最关键的消融是 CoT：无理由的 label-only prompt 与要求理由的 prompt 对比，后者在多个 code 上 kappa 提升。另一个 error source 是 codebook 本身：为人类写的模糊定义、类别重叠和缺乏反例会让模型和人类都不稳定；因此作者建议明确 inclusion/exclusion criteria、给出边界例子、避免一个 code 同时承载多个概念。
 
-错误分析重点是 benchmark 的四类病灶：饱和让分数失去区分度，gamification 让模型优化代理指标，contamination 让测试不再是泛化测试，construct validity 让“reasoning/ToM”等人类概念不一定适用于 LLM。论文也提醒，失败输出不一定证明能力不存在，可能只是上下文/资源限制。
+结果不能解释为 GPT-4 在所有 qualitative coding 上都人类级。code 的难度、文化背景、样本长度、gold 的主观性和污染风险都会改变 kappa；CoT 也可能提高说服力而非真实忠实度，所以仍需盲评、人工复核和跨批次稳定性。
 
 ## Limitations
-这篇文章的机制标准是规范性和哲学性的，未给出统一 intervention benchmark 或完整的 causal certificate。对 consciousness、agency 和认知建模的讨论高度依赖概念定义，部分论证来自现有研究的二手总结。闭源 LLM 的权重、训练数据和系统组件不可见，仍限制了其方法主张的可验证性。
+研究是单一社会历史 case study，9 个 codes 不代表全部人文学科。human gold 不是客观真理，kappa 受类别分布和 coder agreement 影响；zero-shot 结果也可能受到训练数据污染。GPT-4/3.5 是闭源版本，模型更新、成本和隐私限制复现。论文没有测试 rationale 是否忠实反映模型内部机制。
 
 ## 两句话总结
-Part II 主张通过 causal intervention、机制分解和跨模态表示分析，才能把 LLM 的行为成功升级为可解释的内部因果模型，并同时批评 benchmark 污染、gaming 和 construct validity。它不是一套现成算法，而是一张研究路线图：先排除低级解释，再验证可干预组件是否产生目标行为且保持选择性。
+本文把社会历史文本的 9 类 qualitative coding 交给 GPT-4/3.5，并发现 GPT-4 的 kappa 在 8/9 类达到 substantial、3/9 类达到 excellent，同时 rationale/CoT 能显著提高 coding fidelity。它证明的是特定 codebook 和语料下的可扩展行为一致性，不是模型真正理解或 CoT 忠实揭示内部推理的证明。
 
 ## Evidence note
-已读取 arXiv 2405.03207 本地 PDF 的摘要、benchmark critique、mechanistic explanation 和 intervention 章节；本文为哲学/研究议程综述，没有虚构统一实验数字。
+已读取 arXiv 2401.15170 v2 本地 PDF 的摘要、方法、key findings、prompt/codebook 讨论和实验结论；数字按论文摘要和正文表述记录。

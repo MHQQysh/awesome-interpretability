@@ -1,45 +1,42 @@
-# 385. Scalable Qualitative Coding with LLMs: Chain-of-Thought Reasoning Matches Human Performance in Some Hermeneutic Tasks
+# 386. Large Language Models Cannot Explain Themselves
 
-- **Authors:** Zackary Okun Dunivin
-- **Venue / year:** arXiv, 2024
-- **Paper:** https://arxiv.org/abs/2401.15170
-- **Tags:** `LLM` `qualitative-coding` `CoT` `human-evaluation` `rationale`
+- **Authors:** Advait Sarkar
+- **Venue / year:** CHI position/survey paper, 2024
+- **Paper:** https://arxiv.org/abs/2405.04382
+- **Tags:** `LLM` `rationale` `faithfulness` `human-AI-interaction` `explanation`
 
 ## Introduction
-Qualitative coding/content analysis 将段落文本按 codebook 中的类别标注，过去依赖熟悉领域的研究者逐段解释。难点不是关键词匹配，而是密集段落中的隐含主题、语境和社会历史意义；人工团队规模有限，难以分析大语料。本文研究 GPT-4/3.5 能否在不牺牲人类级 coding fidelity 的情况下扩展这种 hermeneutic task。
+LLM 可以被提示去解释自己的答案，因此产品常把一段生成的 rationale 当作 transparency feature。本文的中心论点是：这种文字通常不是对模型机械预测过程的忠实报告，因为模型生成 explanation 和生成 answer 使用的是同一种 next-token mechanism，模型并没有直接访问一个可读的因果 trace。
 
-作者特别关注 codebook 如何为 LLM 重写，以及让模型给出 rationale 的 chain-of-thought 是否提高和解释 coding 决定，而不是只让模型吐一个 label。
+问题因此不只是“解释错了”，而是用户会把 fluent、具体且自信的文本误认为模型真实 reasoning，产生过度信任、错误依赖和不当责任归因。作者也不主张所有 rationale 都没有用，而是区分帮助用户反思的 explanation 与声称揭示内部机制的 explanation。
 
 ## Method / Framework
-研究流程包括：
+这是一篇概念/position paper，区分三种常被混在一起的东西：
 
-1. 使用一组社会历史研究中的 dense paragraph passages 和 9 个 codes，建立 human-derived gold standard。
-2. 将人类 codebook 改写为适合 LLM 的定义、正例/反例、边界和输出格式，进行 zero-shot coding。
-3. 比较 GPT-4 和 GPT-3.5，并比较只输出标签与要求 rationale/CoT 的 prompt。
-4. 用 Cohen's kappa 与 human gold/intercoder agreement 比较模型；同时总结 prompt/codebook 设计 best practices。
+- **mechanistic explanation:** 描述真实产生输出的内部组件、计算和因果路径；
+- **rationale:** 模型事后给出的自然语言理由，可能与答案相关但不一定是答案的原因；
+- **user-facing explanation:** 即使不是机制真相，也可能通过展示证据、假设或不确定性帮助用户批判性思考。
 
-解释在这里有双重角色：它既是对 coding 判定的可读理由，也可能通过迫使模型展开中间判断来提高 fidelity。但作者没有证明 CoT 文本逐步对应真实内部计算。
+作者将 LLM explanation 放在 human-AI decision support 和 HCI 的“explanations affect mental models”传统中，强调应设计 provenance、uncertainty、counterevidence 和 user verification，而不是只增加更多语言。
 
 ## Baselines / Comparisons
-主要 baseline 是 human-derived gold standard、human coder agreement、GPT-3.5 和 GPT-4 的不同 prompt。任务不与简单 bag-of-words/传统 classifier 做主对比，因为目标是高语境解释；公平性来自相同 passages、相同 codebook 和相同 zero-shot 条件。
-
-评价使用 Cohen's kappa：约 0.60 视为 substantial，约 0.75 以上视为 excellent。作者还比较 codebook 原始人类版与经过 LLM 任务重写版，以及是否明确要求 reasoning。
+论文没有新模型或统一实验。概念对比包括模型自述 rationale、外部 feature attribution/visualization、可验证的程序/检索证据、传统可解释模型和真正的 mechanistic interpretability。一个完全透明的 symbolic pipeline 可以提供因果步骤；LLM 自述更像 post-hoc narrative，必须通过 input perturbation、activation intervention 或外部 evidence 检查。
 
 ## Experiments / Findings
-GPT-4 在 9 个 code 中有 8 个达到 substantial agreement (kappa >= 0.6)，其中 3 个达到 excellent agreement (kappa >= 0.79/约 0.75 以上)。GPT-3.5 在相同 prompt 下平均 kappa 只有 0.34，最高约 0.55，明显低于 GPT-4。
+文章的主要 finding 是解释的社会效用和机制忠实性可以分离：一个 rationale 可能让用户更容易理解、记住或质疑答案，但仍然不能回答“哪些权重/激活导致了这个 token”。因此“解释是有用的”不等于“解释是真实的”。
 
-加入 rationale/CoT 后 coding fidelity 显著提高，说明让模型把 codebook 条件应用到文本并说明理由，比只要求一个类别更稳定。作者据此认为在部分 codebook 上 GPT-4 已能进行人类级大规模内容分析，研究者可以把时间投入到 codebook 设计、边界案例和更具创造性的工作。
+作者特别警惕 fluent false explanation：模型可以为错误答案生成连贯理由，甚至引用不存在的证据；用户看到具体理由后反而提高错误信心。对产品设计而言，最可靠的界面不应只显示 self-explanation，还应显示来源、可验证中间产物、置信度和明确的未知状态。
 
 ## Ablation / Error Analysis
-最关键的消融是 CoT：无理由的 label-only prompt 与要求理由的 prompt 对比，后者在多个 code 上 kappa 提升。另一个 error source 是 codebook 本身：为人类写的模糊定义、类别重叠和缺乏反例会让模型和人类都不稳定；因此作者建议明确 inclusion/exclusion criteria、给出边界例子、避免一个 code 同时承载多个概念。
+本文没有 conventional ablation。其反事实建议包括：改变 prompt/答案而保持解释请求，检查 rationale 是否跟随答案；遮蔽被解释为关键的输入，检查预测是否变化；比较 rationale 与 activation/feature attribution；让另一个模型或人类检查理由是否引用真实证据。
 
-结果不能解释为 GPT-4 在所有 qualitative coding 上都人类级。code 的难度、文化背景、样本长度、gold 的主观性和污染风险都会改变 kappa；CoT 也可能提高说服力而非真实忠实度，所以仍需盲评、人工复核和跨批次稳定性。
+错误分析的根源是“生成 explanation 的模型没有 privileged access to its own computation”。即便 reasoning token 与正确答案相关，它们也可能是模型学到的解释风格；即便 explanation 与输出一致，也不能排除另一个未报告的机制才真正产生输出。
 
 ## Limitations
-研究是单一社会历史 case study，9 个 codes 不代表全部人文学科。human gold 不是客观真理，kappa 受类别分布和 coder agreement 影响；zero-shot 结果也可能受到训练数据污染。GPT-4/3.5 是闭源版本，模型更新、成本和隐私限制复现。论文没有测试 rationale 是否忠实反映模型内部机制。
+文章是警示性论证，不提供一个新型 faithful explanation 算法，也没有统一量化不同 rationale 失真的概率。mechanistic explanation 本身在大模型上也很难，外部 attribution 同样可能有局限。作者的“不能 explain themselves”应理解为不能仅靠自由生成的自述保证机制忠实，不是说 LLM 输出的所有解释都没有用户价值。
 
 ## 两句话总结
-本文把社会历史文本的 9 类 qualitative coding 交给 GPT-4/3.5，并发现 GPT-4 的 kappa 在 8/9 类达到 substantial、3/9 类达到 excellent，同时 rationale/CoT 能显著提高 coding fidelity。它证明的是特定 codebook 和语料下的可扩展行为一致性，不是模型真正理解或 CoT 忠实揭示内部推理的证明。
+本文指出 LLM 自己生成的 rationale 通常是 post-hoc text，不应被当作准确描述 next-token 预测的机械因果过程。更安全的解释设计应把 rationale 当作辅助沟通层，并用证据、干预、反事实和不确定性校验其可靠性。
 
 ## Evidence note
-已读取 arXiv 2401.15170 v2 本地 PDF 的摘要、方法、key findings、prompt/codebook 讨论和实验结论；数字按论文摘要和正文表述记录。
+已读取 arXiv 2405.04382 本地 PDF 的摘要、概念区分、HCI 风险与结论；本文没有实验表，已明确标为 position/conceptual work。
