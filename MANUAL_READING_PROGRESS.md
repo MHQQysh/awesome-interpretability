@@ -25,6 +25,7 @@
 | 251-260 | 已完成 | 已逐篇核对可获得的论文正文/预印本文本；对受限全文条目明确标注了证据边界，并写入独立 Markdown |
 | 261-270 | 已完成 | 已逐篇核对可获得的论文正文/预印本文本；对受限全文条目明确标注了证据边界，并写入独立 Markdown |
 | 271-280 | 已完成 | 已逐篇核对论文 PDF 的 Introduction、Method、Baselines、Experiments、Ablation、Findings 和 Limitations，并写入独立 Markdown |
-| 281-500 | 待精读 | 已扩充到 500 篇清单，后续按每批 10 篇处理 |
+| 281-290 | 已完成 | 已逐篇核对论文 PDF 的 Introduction、Method、Baselines、Experiments、Ablation、Findings 和 Limitations，并写入独立 Markdown |
+| 291-500 | 待精读 | 已扩充到 500 篇清单，后续按每批 10 篇处理 |
 
 > 这里的“已完成”指已逐篇检查论文正文，而不是只根据标题或摘要生成模板。
