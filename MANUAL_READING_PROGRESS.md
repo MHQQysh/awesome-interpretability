@@ -46,9 +46,9 @@
 | 461-470 | 已完成 | 已逐篇读取可获得全文；465 为 ACM Multimedia 闭源条目，明确记录摘要/元数据证据边界；其余覆盖 localization 与 editing 因果差异、法律 RAG 解释、DDCoT、多级脑网络 attention、LLM+MLN 医疗解释、meaning 理论、knowledge-driven CoT、线性表示几何和 SASC 黑盒解释 |
 | 471-480 | 已完成 | 已逐篇读取可获得全文；471 为 CIKM 开放 PDF/摘要证据，覆盖 neural ranking embedding geometry、递归程序 shortcut、CoK、N2G、successor heads、instruction tuning 内部变化、多模态 sentiment 文本化、视觉 neuron 解释、RAG survey 和 GPT-4 医疗评估 |
 | 481-490 | 已完成 | 已逐篇读取可获得全文；482 为 TechRxiv survey 摘要/元数据证据边界；其余覆盖 TPUv4 系统、性别偏见与不忠实解释、DPO、StarCoder、代码解释教育、外部知识反馈、GPT-NER 和 augmented LM survey |
-| 461-470 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
-| 471-480 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
-| 481-490 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
-| 491-500 | 待精读 | 继续按每批 10 篇逐篇读取并写独立 Markdown |
+| 461-470 | 已完成 | 已逐篇核对可获得全文，并写入独立 Markdown |
+| 471-480 | 已完成 | 已逐篇核对可获得全文，并写入独立 Markdown |
+| 481-490 | 已完成 | 已逐篇核对可获得全文，并写入独立 Markdown |
+| 491-500 | 已完成 | 已逐篇读取正文或公开全文证据，并写入独立 Markdown；493 明确记录全文访问边界 |
 
 > 这里的“已完成”指已逐篇检查论文正文，而不是只根据标题或摘要生成模板。
