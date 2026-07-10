@@ -1,64 +1,79 @@
 # 088. Interpretability Analysis of Arithmetic In-Context Learning in Large Language Models
 
-> 逐篇阅读记录：第 88 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：EMNLP 2025。重点是区分 arithmetic symbol information 与 in-context example 的 pattern information。
 
 ## 0. 论文信息
 
 - **作者**：Gregory Polyakov, Christian Hepting, Carsten Eickhoff, Seyed Ali Bahrainian
-- **发表 venue / date**：EMNLP / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.emnlp-main.92)
-- **领域标签**：Analysis, LLM, Behavior, Analyze
-- **本地 PDF 文本规模**：约 12,471 个词
+- **来源**：[EMNLP 2025](https://aclanthology.org/2025.emnlp-main.92)
+- **代码**：[arithmetic-icl-interpretability](https://github.com/ali-bahrainian/arithmetic-icl-interpretability)
+- **模型**：Pythia-12B、OPT-6.7B、MPT-7B、Llama-3.1-8B
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型生成的理由可能只是事后合理化，研究需要同时考察理由的可读性、忠实性和对决策的实际解释力。
-- **摘要主线**：解决大模型行为复杂、内部决策依据难以被人类理解的问题。。方法上以Analysis为主线，通过表征分析、因果干预或解释评估来连接内部机制与外部行为。
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+LLM 在加入一个 in-context example（ICE）后，三操作数 arithmetic 的准确率显著提高，但这种提升来自真正学会了算术，还是只识别了示例的格式和结果模式？已有 mechanistic interpretability 研究主要分析两操作数或简单 function vector，尚未解释复杂三操作数任务中 ICE 的 symbol-level 和 pattern-level 信息如何流动。
 
-## 2. Introduction 讲解
+论文把 ICE 拆成两类因素：symbol information 是具体 operand、operator 和算术正确性；pattern information 是 token 顺序、等号结构、数字/英文格式和结果位置的一致性。作者用 activation patching、information flow routes、function vectors 和 edge attribution patching 逐步定位信息路径。
 
-- **引言结构**：1 Introduction ken, where it modulates higher-level computations；2 Related Work；3 Methodology mt or at at the chosen position t and layer k,；4 Experimental Results；2023. Pythia: A suite for analyzing large language Dahle, Aiesha Letman, Akhil Mathur, Alan Schelten,；2017. Linking news across multiple streams for time-；X The experiments 1-7 in Section 4 consistently high-；1. Given a set of prompts S (all containing ICEs),
-- **引言关键线索**：by interacting with task-specific information. Numerical reasoning in natural language tasks, We focus on two key aspects of the ICE: (1) such as solving arithmetic problems, poses a signif- symbol-level information, encompassing individ- icant challenge for large language models (LLMs) ual tokens, operands, operators, and the arithmetic (Testolin, 2024). Despite excelling in diverse do- correctness of the ICE; and (2) pattern-level infor- mains, LLMs struggle with text-based mathemati- mation, which includes consistency in formatting cal problems (Welleck et al., 2022). (e.g., 鈥6鈥 vs. 鈥渟ix鈥) and the arrangement of tokens A promising approach for improving LLM per- within the equation. Via a comprehensive set of formance in this area involves the use of in-context counterfactual activation patching experiments, we examples (ICEs), where a model is given one examine how corrupting these d
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+### 2.1 数据与基线
 
-- **方法段落线索**：formance in this area involves the use of in-context counterfactual activation patching experiments, we examples (ICEs), where a model is given one examine how corrupting these distinct symbol- and or more task demonstration prior to the main pattern-level structures within an ICE impacts the task. This method has shown considerable promise model鈥檚 internal processing and task accuracy. We 1 https://github.com/ali-bahrainian/arithmetic-icl- find that pattern-level information is more crucial interpretability for guiding the model towards correct arithmetic 1758 Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing, pages 1758鈥1777 November 4-9, 2025 漏2025 Association for Computational Linguistics Experiment Description Category Accuracy Exp. 1: Information flow analysis Analysis of the activation patterns in the residual stream at ICE and task Baseline 100% tokens. Exp. 2: Activation patching analysis Id
-- **方法与解释性关系**：该论文主要围绕 `Analysis, LLM, Behavior, Analyze` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+Arithmetic-20 让 0--20 的整数尽量使用单 token，包含加减乘和数字/英文两种形式。选取模型在 one-shot ICE 中答对、zero-shot 中答错的样本，以隔离 ICE 的作用。Pythia-12B 的 one-shot accuracy 从 zero-shot 28.3% 提高到 52.1%。
 
-## 4. Baseline 与对比讲解
+Arithmetic-1000 扩展到更大的整数，Llama-3.1-8B 的 zero-shot accuracy 为 30.0%，one-shot 提升到 76.7%；zero-shot prompt 会 padding 到与 one-shot 长度一致，避免长度造成 patching 偏差。
 
-- **检测到的 baseline / comparison 关键词**：Exp, Information flow analysis Analysis, ICE and task Baseline, Activation patching analysis Identification, MLP and attention modules, Baseline 100, Brown et al, Henighan et al, Llama-3, Figure 3b, Step 2, Appendix C, This step measures, Future work can
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - Exp. 1: Information flow analysis Analysis of the activation patterns in the residual stream at ICE and task Baseline 100%
-  - Exp. 2: Activation patching analysis Identification of MLP and attention modules鈥 contribution to arithmetic Baseline 100%
-  - reasoning (Brown et al., 2020; Henighan et al., a 30.0% zero-shot (p0 ) baseline to 76.7% with a
-  - this baseline understanding, we conducted coun- while the core mechanism is similar, Llama-3.1-8B
-  - impact on the model鈥檚 performance. baseline zero-shot accuracy was 48.6%, which in-
-  - non-numeral symbols (e.g., 鈥1+3+4=8鈥 to 鈥渁l- the baseline accuracy improved from 30.0% (zero-
+### 2.2 Activation patching
 
-## 5. Experiments 与 Findings 讲解
+记录含 ICE 的 clean prompt activation，再把 ICE 删除的 corrupted prompt 中某个 token/layer 的 attention、MLP 或 residual activation 替换回来。以正确答案和错误预测的 logit difference 变化定义 patching effect，定位哪些 token 和模块对成功解题有因果贡献。
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - tially improve performance on zero-shot arithmetic mation flow routes (Ferrando and Voita, 2024), ana-
-  - full ICEs. This reinforces our conclusion that mod- network pathways. MI has been applied to under-
-  - ing their internal components (Elhage et al., 2021; essence, which can improve performance on simple
-  - grades with increased calculation complexity and dataset, Llama-3.1-8B鈥檚 accuracy improved from
-  - substantially improved accuracy to 52.1% from To complement our activation patching experi-
-  - further improvements. formation transfer, we also employ Information
-  - the ICE result token, transferring this information ICE鈥檚 result. Moreover, significantly high PEs oc-
+### 2.3 Information flow / function vector
 
-## 6. Conclusion、局限与可复现性
+Information Flow Routes 从最终预测向后追踪重要组件；function vector 则从 ICE 结果位置相关的 attention heads 中提取平均向量，注入 zero-shot prompt，检验是否能压缩传递 ICE 的模式信息。Edge Attribution Patching 进一步找出 Pythia-12B 的算术子电路。
 
-- **结论段落线索**：els primarily rely on abstract pattern-level cues of stand factual recall (Meng et al., 2023), linguistic arithmetic ICEs rather than exact symbolic content. phenomena (Wang et al., 2022), and simpler two- Our main contributions are: (1) We present operand arithmetic tasks (Stolfo et al., 2023). Our the first mechanistic interpretability study focused work employs a suite of MI techniques, such as on how LLMs process ICEs for complex, three- activation patching, information flow analysis and operand arithmetic tasks. (2) We identify and attribution patching, to investigate complex three- validate the core computational pathway through operand arithmetic with in-context examples. which ICE information influences task outputs. (3) In-Context Learning (ICL). ICL enables LLMs We demonstrate that pattern-level consistency in to perform tasks with minimal examples, bypass- ICE formatting plays a more critical role than sym- ing model fine-tuning (Brown et al., 2020; Liu bolic correctness or 
-- **局限/未来工作线索**：crucial for encoding the result token. Although 6 Conclusions and Future Work；racy, in comparison the effect is less pronounced. on compute-intensive methods. Future work can；G Compatibility Limitations of the MPT-7B, and LLama-3.1-8B. Llama-3.1-8B also
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 3. Baseline / 对比基线
 
-## 7. 一句话定位
+- **Zero-shot p0 vs one-shot p1**：最基本性能基线，确定 ICE 是否真正帮助模型。
+- **Arithmetically correct/incorrect result replacement**：只改 ICE result 的 symbol，测试算术正确性。
+- **Format-consistent/inconsistent replacement**：保持或破坏数字/英文格式，测试 pattern。
+- **Random non-numeral replacement**：控制 token identity 被完全破坏时的影响。
+- **Operand replacement**：改 operand，比较具体数字与 result token 的因果重要性。
+- **多模型 replication**：Pythia、OPT、MPT、Llama 对照，避免发现只是某个架构的 artifact。
 
-这篇论文把“Interpretability Analysis of Arithmetic In-Context Learning in Large Language Models”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+## 4. Experiments / Findings：结果如何读
+
+### 4.1 结果 token 比具体算术更重要
+
+表 1 的 Pythia-12B 结果：基线 p1 为 100%；把 ICE result 换成算术错误但格式一致的 token，准确率降到 37.4%；换成格式不一致的 result，降到 30.6%；同时错误且格式不一致约 29.2%，换成随机非数字符号则降到 0%。
+
+只替换 ICE operands 的准确率仍为 69.4%，说明模型并非完全依赖每个具体数字。pattern-consistent 的错误结果仍保留相当能力，表明“这是一个合法 ICE result、位置和格式正确”比具体 symbol correctness 更能驱动后续任务。
+
+### 4.2 信息流的阶段性
+
+早期 MLP/attention 处理 ICE token；attention 把 ICE result 的模式信息聚合到 result/equals 位置；中层再把该信号路由到 task equals sign；最终层组合任务上下文与 result-derived pattern。Logit lens 显示部分算术和只在晚层出现，且不是中层驱动正确答案的主要信号。
+
+在 Pythia-12B 中，EAP 得到的完整 arithmetic circuit 与只处理 ICE result 的 circuit 有约 56% edge overlap，而 operand/operator 专属 circuit 的 overlap 不超过 22%，进一步支持 result token 的中心作用。
+
+### 4.3 Function vector 与跨模型
+
+从 ICE 相关 heads 提取的 function vector 可以注入 zero-shot prompt，使其准确率接近 one-shot，而不需要显式保留全部 ICE。Llama-3.1-8B 在大数 Arithmetic-1000 上也出现类似提升，说明向量携带的是可复用的任务模式，但不同模型的峰值 layer 不完全一致。
+
+MPT-7B 的 one-shot accuracy 从 6% 到 43%；其 patching 峰值更偏向第二个 MLP layer，说明架构（例如 ALiBi）会改变信息传递位置，但总体 pattern-level finding 相近。
+
+## 5. Ablation / 机制解释
+
+- Exp. 3--6 分离 arithmetic correctness、format consistency、symbol identity 和 operand content。
+- Exp. 7 联合 patch 第一层 ICE-result MLP 与后续 attention，检验早期写入和后续路由的交互。
+- residual stream、MLP、attention、logit lens、information flow 和 EAP 交叉验证，避免单一 attribution 方法的假阳性。
+- 加入更详细自然语言 task description 后，patching pattern 基本保持，说明发现不只依赖极简 prompt。
+
+## 6. Limitations / 局限与复现注意
+
+- Arithmetic-20 为单 token 数字设计，真实数学任务和多 token 数字可能有不同 circuit。
+- Information Flow Routes 受 TransformerLens/模型架构兼容性限制，MPT 等模型部分分析只能用 patching。
+- “pattern 更重要”不等于模型完全不会算术；晚层仍出现 arithmetic representation，论文结论是它不是主要驱动路径。
+- function vector 依赖数据平均和 head 选择，跨任务、跨语言、跨复杂度的可迁移性需要更多验证。
+
+## 7. 两句话总结
+
+论文发现三操作数 arithmetic ICL 主要先把 ICE 的格式和结果位置模式传到任务位置，而不是在中层直接复制每个具体数字的算术内容。activation patching 和 EAP 共同定位了早期 result processing 与后续 attention routing，并表明抽取出的 function vector 能把 one-shot 模式压缩到 zero-shot 推理中，但复杂数字与架构变化仍会改变具体路径。

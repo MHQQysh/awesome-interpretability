@@ -1,64 +1,76 @@
 # 082. Domain Knowledge Transferring for Pre-trained Language Model via Calibrated Activation Boundary Distillation
 
-> 逐篇阅读记录：第 82 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：DoKTra。重点核对了知识转移框架、任务基线、表 2--7 和组件消融。
 
 ## 0. 论文信息
 
-- **作者**：Dongha Choi, Hongseok Choi, Hyunju Lee
-- **发表 venue / date**：ACL / 2022/01
-- **正式页面**：[Paper](https://aclanthology.org/2022.acl-long.116)
-- **领域标签**：Analysis, Hidden, LLM, Activation, Analyze
-- **本地 PDF 文本规模**：约 7,855 个词
+- **作者**：Dongha Choi, HongSeok Choi, Hyunju Lee
+- **主题**：领域知识转移、知识蒸馏、激活边界、模型校准
+- **来源**：[ACL 2022](https://aclanthology.org/2022.acl-long.116)
+- **代码**：[DoKTra](https://github.com/DMCB-GIST/DoKTra)
+- **任务**：生物医学、临床和金融文本分类
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型的知识、能力或行为信号分散在内部表征中，研究需要定位承载信号的神经元、特征、层或电路。
-- **摘要主线**：解决大模型隐藏表征中承载了什么知识、语义或行为信号的问题。。方法上以Analysis为主线，结合论文摘要中的核心设定：Since the development and wide use of pretrained language models (PLMs), several approaches have been applied to boost their performance on downstream tasks in specific domains, such as biomedical or scientific domains.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+领域 PLM（如 BioBERT、FinBERT）通常靠大量领域语料继续预训练获得优势，但这种流程昂贵，而且新领域模型出现后，已有通用模型或下游 student 需要重新预训练。普通知识蒸馏主要匹配 teacher/student 的输出概率或 hidden representation，容易把 teacher 的过度自信和不可靠概率一并传给 student。
 
-## 2. Introduction 讲解
+作者提出的问题是：能否利用一个领域 teacher 的知识，把一个规模更小或更通用的 student 快速迁移到领域任务，同时避免额外领域预训练？核心想法是先校准 teacher 的置信度，再蒸馏 teacher hidden representation 中的激活边界，而不是只蒸馏 logits。
 
-- **引言结构**：3 DoKTra framework；4 Experiments；2095. Martin Krallinger, Obdulia Rabal, Saber A Akhondi,
-- **引言关键线索**：known knowledge transfer method that is primarily Recently, transformer (Vaswani et al., 2017)-based used for model compression. The knowledge from language models have been successfully applied in a larger and more effective teacher model is dis- the field of natural language processing (NLP). In tilled to a smaller student model by encouraging it particular, the two-stage approach of 鈥減re-training to mimic the teacher characteristics, such as soft and fine-tuning,鈥 such as BERT (Devlin et al., probabilities (Hinton et al., 2015) or hidden repre- 2019), has become the standard for NLP applica- sentations (Kim et al., 2018; Sun et al., 2019). tions. Generally, a transformer-based model is pre- In this study, we propose a domain knowledge trained with a large amount of text data in an unsu- transfer (DoKTra) framework for an advanced 鈭 Hyunju Lee is the corresponding author. PLM via calib
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+### 2.1 Calibrated Teacher Training（CTT）
 
-- **方法段落线索**：formance on downstream tasks in specific do- tinue to emerge, including ALBERT (Lan et al., mains, such as biomedical or scientific domains. 2019) or RoBERTa (Liu et al., 2019). Additional pre-training with in-domain texts However, these models must be further improved is the most common approach for providing for tasks requiring domain knowledge, such as domain-specific knowledge to PLMs. How- those in the biomedical or financial domains, as ever, these pre-training methods require consid- erable in-domain data and training resources the pre-training data usually consist of general do- and a longer training time. Moreover, the train- main text (e.g., Wikipedia). Additional pre-training ing must be re-performed whenever a new PLM with in-domain text has been proposed to provide emerges. In this study, we propose a domain the PLMs with domain-specific knowledge. For ex- knowledge transferring (DoKTra) framework ample, in the biomedical d
-- **方法与解释性关系**：该论文主要围绕 `Analysis, Hidden, LLM, Activation, Analyze` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+teacher 先在领域/任务数据上 fine-tune。随后加入 confidence penalty / entropy regularization，使输出分布不至于过度尖锐。直观上，CTT 让 teacher 的监督信号“可蒸馏”：正确类仍应占优，但非正确类的概率不再被不合理地压到接近零。
 
-## 4. Baseline 与对比讲解
+### 2.2 Activation Boundary Distillation（ABD）
 
-- **检测到的 baseline / comparison 关键词**：PLMs by applying knowledge, In have been successfully, Figure 1, Comparison between, The comparison between our, Table 3, Performance comparison between existing, Table 4, Performance comparison between TAPT, Performance comparisons followed the, TAPT except, Lewis et al, RoBERTa-large DoKTra for a, The possible maxi-, As mentioned be- The, As both TAPT and, DoK- and distillation steps, The comparison of TAPT
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - PLMs by applying knowledge distillation. In have been successfully used as strong baselines
-  - Figure 1: Comparison between (a) an existing domain student models that retain most of the perfor-
-  - The comparison between our framework and a con- words, using masked language modeling and a next
-  - Table 3: Performance comparison between existing pre- Table 4: Performance comparison between TAPT and
-  - 4.4 Performance comparisons followed the hyperparameters used in TAPT except
-  - (Lewis et al., 2020), which is a RoBERTa-large DoKTra for a fair comparison. The possible maxi-
+对 teacher 和 student 的 [CLS] hidden representation，作者关注每个维度激活的正负边界。激活指示函数把 x>0 视为 active、否则 inactive；distillation loss 迫使 student 复现 teacher 的 activation pattern。相比 L2/KL 直接拟合数值，ABD 只传递决策边界附近的结构，理论上更能保留任务判别形状且不要求 student 完全复制 teacher 的尺度。
 
-## 5. Experiments 与 Findings 讲解
+### 2.3 训练流程
 
-- **可检测的数值信号**：10 times, 1 X
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - proaches have been applied to boost their per- improved architectures or training methods con-
-  - Additional pre-training with in-domain texts However, these models must be further improved
-  - performance and even outperform the teach- Specifically, we focus on the applicability of knowl-
-  - knowledge to the student, which is more efficient (2019) proposed ALBERT, which outperformed
-  - We apply our framework to the biomedical do- (2019) observed that BERT is significantly under-
-  - The main goal of the DoKTra framework is to pro- BioBERT model outperforms the BERT model in
-  - and thus, have a positive effect on distillation. a confidence penalty improves both the calibration
+student 先 fine-tune，再进行 calibrated teacher training 和 activation boundary distillation；损失在 distillation 与 refinement 之间通过 gamma 切换/平衡。最终 student 用 task classification loss 加上边界迁移目标训练。框架的关键不是单一 loss，而是“先校准 teacher，再迁移 activation boundary”这一组合。
 
-## 6. Conclusion、局限与可复现性
+## 3. Baseline / 对比基线
 
-- **结论段落线索**：matics, 32(3):432鈥440. In this study, we proposed the DoKTra framework as a domain knowledge transfer method for PLMs. 脌lex Bravo, Janet Pi帽ero, N煤ria Queralt-Rosinach, The experimental results from the biomedical, clini- Michael Rautschka, and Laura I Furlong. 2015. Ex- traction of relations between genes and diseases from cal, and financial domain downstream tasks demon- text and large-scale data analysis: implications for strated that our proposed framework could trans- translational research. BMC bioinformatics, 16(1):1鈥 fer domain-specific knowledge into a PLM, while 17. 1666 Jang Hyun Cho and Bharath Hariharan. 2019. On the Geoffrey Hinton, Oriol Vinyals, and Jeff Dean. 2015. efficacy of knowledge distillation. In Proceedings Distilling the knowledge in a neural network. arXiv of the IEEE/CVF International Conference on Com- preprint arXiv:1503.02531. puter Vision, pages 4794鈥4802. Jangho Kim, SeongUk Park, and Nojun Kwak. 2018. Dongha Choi and Hyunju Lee. 2020. Extracting Paraph
-- **局限/未来工作线索**：tillation, which focuses on the activation of tional pre-training has several limitations, such as；can be fairly compared in terms of performance is left as a future work.；In this study, we selected the FinBERT (Yang teacher model. However, the limitations of our
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+- BERT-ft、ALBERT-ft、RoBERTa-ft：只对 student 做任务 fine-tuning，检验蒸馏是否真的带来收益。
+- BioBERT-ft、RoBERTa-PM-ft：领域/更强预训练模型作为 teacher 或直接下游模型，提供领域知识上限和现有强基线。
+- KLD：标准 KL-divergence output distillation，检查 ABD 是否优于只拟合输出分布。
+- TAPT：Task-Adaptive Pre-Training，代表“继续用任务数据预训练”的常见知识适配方案。
+- DoKTra-CTT、完整 DoKTra：分别移除 calibrated teacher training 或 activation-boundary 组件，构成机制对照。
 
-## 7. 一句话定位
+这里的重点不是引入一个更大的 teacher，而是比较“直接 fine-tune、输出蒸馏、任务自适应预训练、激活边界蒸馏”四条知识迁移路线。
 
-这篇论文把“Domain Knowledge Transferring for Pre-trained Language Model via Calibrated Activation Boundary Distillation”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+## 4. Experiments / Findings：结果如何读
+
+### 4.1 五个生物医学/临床任务
+
+数据包括 ChemProt、GAD、DDI、i2b2 和 HoC，指标主要是 micro-F1/F1。表 2 显示 DoKTra 在 ALBERT 和 RoBERTa student 上平均性能稳定提升：ALBERT-DoKTra 平均 F1 约 79.02，RoBERTa-DoKTra 约 80.53，并报告相对 student 规模的性能/参数效率提升。
+
+表 3 的比较结论是：DoKTra 在五个任务总体优于普通 fine-tuned student，并在多个任务达到或超过 BioBERT、RoBERTa-PM 等领域基线；但 RoBERTa-PM 在 i2b2 上仍有优势，说明更强的领域预训练并没有被完全替代。
+
+### 4.2 与 TAPT 的比较
+
+TAPT 需要把任务数据再次用于预训练，论文报告在其设置下 TAPT 训练约 7 小时，而 DoKTra 约 1 小时完成。两者都是 task-specific，但 DoKTra 直接利用已有 teacher，并通过校准和 ABD 迁移知识；因此收益不仅是 F1，也包括适配成本。
+
+### 4.3 CTT/ABD 消融
+
+ChemProt 消融表对比 teacher-ft、+KLD、+CTT+KLD 和 +CTT+ABD。teacher fine-tune 约 76.20 F1；加入 KLD 只有小幅变化，CTT+KLD 约 76.87，而完整 CTT+ABD 约 77.42。结论是：校准本身能改善蒸馏信号，但 ABD 是进一步增益的主要来源；仅仅把输出概率蒸给 student 不足以复现 teacher 的判别结构。
+
+### 4.4 金融领域迁移
+
+作者用 FinBERT 作为 financial teacher，在 Financial PhraseBank 与 FinTextSen 上测试 ALBERT/RoBERTa student。表 7 中 ALBERT-DoKTra 和 RoBERTa-DoKTra 的结果超过 FinBERT-ft teacher，说明方法不只适用于 biomedical domain，也能把领域知识迁移到通用 student。
+
+## 5. Ablation / 机制解释
+
+主要消融有两类：去掉 CTT，检验性能是否只是来自 teacher；把 ABD 换成 KLD，检验激活边界是否比概率匹配更有用。另有与 TAPT 的成本/性能对照。结果支持如下因果链：CTT 让 teacher 的 supervision 更可靠；ABD 让 student 学到 activation pattern，而非被 teacher 的 probability scale 限制；二者组合才稳定超过普通 fine-tuning 和 KLD。
+
+## 6. Limitations / 局限与复现注意
+
+- DoKTra 需要领域 teacher，不能在没有任何领域模型或领域标签数据时凭空产生知识。
+- 方法按任务训练，作者也承认 task-specific；换领域/换任务通常要重新蒸馏。
+- 激活边界只在选定层和 [CLS] 表征上约束，未证明能完整迁移生成式或 token-level 能力。
+- 论文数据规模和模型规模有限，financial 结果虽有迁移性，但不等同于通用领域适配保证。
+
+## 7. 两句话总结
+
+论文要解决的是昂贵的领域继续预训练和不可靠 teacher 概率蒸馏问题。DoKTra 先用置信度正则校准 teacher，再把 teacher 的 hidden activation boundary 蒸馏给 student，消融显示 ABD 比单纯 KLD 更关键，并在生物医学、临床和金融任务上以较低适配成本取得稳定收益。

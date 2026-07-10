@@ -1,64 +1,72 @@
 # 089. Logit Space Constrained Fine-Tuning for Mitigating Hallucinations in LLM-Based Recommender Systems
 
-> 逐篇阅读记录：第 89 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：本文把 hallucination 作为推荐系统中的偏好矛盾/事实不一致问题，用 logit-space contrastive constraint 训练 LLM recommender。
 
 ## 0. 论文信息
 
-- **作者**：Jie Deng, Qingfeng Chen, Debo Cheng, Jiuyong Li, Lin Liu
-- **发表 venue / date**：EMNLP / 2025/01
-- **正式页面**：[Paper](https://aclanthology.org/2025.emnlp-main.1491)
-- **领域标签**：Representation, Evaluation, Hallucination, Hidden, Behavior, Detect
-- **本地 PDF 文本规模**：约 9,070 个词
+- **作者**：Jianfeng Deng, Qingfeng Chen, Debo Cheng, Jiuyong Li, Lin Liu
+- **主题**：LLM 推荐、hallucination、对比式 fine-tuning、logit space
+- **来源**：[EMNLP 2025](https://aclanthology.org/2025.emnlp-main.1491)
+- **对象**：TALLRec 与 CoLLM 风格系统；LLaMA-7B、Vicuna-7B backbone
+- **数据**：movie、book、ML-1M、Amazon-Book；AUC 为主要指标
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型输出可能不事实、不忠实或无法可靠归因，研究需要把这些风险转化为可评测、可解释的对象。
-- **摘要主线**：解决大模型幻觉或事实性错误难以定位、解释和诊断的问题。。方法上以Representation为主线，结合论文摘要中的核心设定：Large language models (LLMs) have gained increasing attention in recommender systems, but their inherent hallucination issues significantly compromise the accuracy and reliability of recommendation results.Existing LLM-b
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+LLM recommender 可以利用自然语言历史记录理解用户偏好，但普通 fine-tuning 容易生成自相矛盾或捏造的推荐。例如模型可能同时判断用户喜欢和不喜欢同一电影，或者把历史中未出现的偏好当成事实。传统推荐模型在 few-shot 条件下又难以获得 LLM 的语义泛化能力。
 
-## 2. Introduction 讲解
+作者的问题是：能否不重新设计推荐模型，而在 fine-tuning 时直接约束 LLM 的 logit representation，让语义相反的 instruction 得到足够不同、且与用户偏好一致的输出分布？为此提出 LCFT（Logit-space Constrained Fine-Tuning）。
 
-- **引言结构**：2 Related Work；3 Preliminary；2024 IEEE 40th International Conference on Data the most recent 20 months of interaction records
-- **引言关键线索**：(Dai et al., 2023b) integrates LLMs with traditional Large language models (LLMs), such as GPT- recommendation models to enhance performance. 3 (Ouyang et al., 2022; Brown et al., 2020) and However, due to the discrepancy between the pre- LLaMA (Touvron et al., 2023), are pretrained on training objectives of LLMs and the specific goals massive datasets and demonstrate exceptional ca- of recommendation tasks, using LLMs directly as pabilities in contextual understanding, knowledge recommendation generators still faces performance reasoning, and compositional generalisation. Their limitations in practical applications. utility has expanded beyond traditional natural To mitigate the discrepancy between the pre- language processing (NLP) (Liang et al., 2022; training objectives of LLMs and the goals of rec- Chowdhery et al., 2022; Wei et al., 2022) to fields ommendation tasks, several studie
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+### 2.1 正负 instruction pair
 
-- **方法段落线索**：hallucination issues during the fine-tuning pro- cantly (Chen et al., 2024; Zhang et al.; Deng et al., cess. To address this challenge, we propose 2024). LLMs can mitigate cold-start problems for Logit Space Constraints Fine-Tuning (LCFT), users and items by leveraging their extensive pre- a novel fine-tuning framework designed to mitigate hallucination in LLM-based recom- trained knowledge (Sanner et al., 2023), support dy- menders. Specifically, LCFT takes as input namic modelling through contextual reasoning (Dai semantically positive and negative instruction et al., 2023a; Gao et al., 2023), and introduce novel pairs and incorporates Kullback鈥揕eibler (KL) mechanisms to transcend the limitations of tradi- divergence into the training objective to ex- tional collaborative filtering approaches. plicitly maximise their distributional disparity Recommendation methods based on LLMs have in the logit space. By conducting such logit demonst
-- **方法与解释性关系**：该论文主要围绕 `Representation, Evaluation, Hallucination, Hidden, Behavior, Detect` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+对每个用户-物品样本构造语义相反的正/负 instruction，例如“用户喜欢该电影吗？”与“用户不喜欢该电影吗？”。同一历史记录下，模型应对两条 instruction 产生一致而相反的 preference decision。
 
-## 4. Baseline 与对比讲解
+### 2.2 Logit-space KL constraint
 
-- **检测到的 baseline / comparison 关键词**：LKL represents the training, Baselines, To verify the effectiveness, LCFT-TALLRec over baseline methods, LCFT-CoLMF over the baseline, Appendix B. achieves the, Performance Comparison tion space, LLMs, The table 1 presents, Although LLM-based, Compared with various baseline
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - ing setting, then describe the baseline methods and
-  - tuning objective, and LKL represents the training Baselines. To verify the effectiveness of our pro-
-  - the average relative improvement of LCFT-TALLRec over baseline methods across the three different shot settings.
-  - and compare it with the following baseline meth- between users and items via inner product. (8)
-  - denotes the average relative improvement of LCFT-CoLMF over the baseline methods on the two evaluation metrics.
-  - found in Appendix B. achieves the best performance among all baselines,
+LCFT 保留原始 recommendation/fine-tuning objective，同时加入 KL divergence 项，最大化相反 instruction 的 logit distributions 差异。与 token-level hard label 相比，这个约束直接作用于模型输出分布，减少“两个相反问题给出同一答案”的机会。
 
-## 5. Experiments 与 Findings 讲解
+LCFT 被集成到 TALLRec 和 CoLLM 两个推荐框架中，分别形成 LCFT-TALLRec 和 LCFT-CoLMF；训练使用 AdamW，实验在 few-shot 和 full-shot 两种数据量下重复多个随机种子。
 
-- **可检测的数值信号**：10 times
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - their inherent hallucination issues significantly
-  - dation datasets to fine-tune LLMs and improve of LLM-based recommender systems can signif-
-  - models and applies joint fine-tuning to improve tem does not suffer from hallucination and pos-
-  - ment learning to optimise LLMs, significantly en- generate different recommendation results when
-  - to improve ranking accuracy; (Zheng et al., 2024) based recommender systems, we propose a novel
-  - mitigates hallucinations and improves recommen- their potential in recommender systems. A repre-
-  - In this section, we review several studies related to tion scenario-specific instructions to improve rec-
+## 3. Baseline / 对比基线
 
-## 6. Conclusion、局限与可复现性
+- **传统推荐模型**：MF、NCF、GRU-BERT 等，检验 LLM 语义能力在少样本下是否有优势。
+- **TALLRec/CoLLM 普通 fine-tuning**：不加 LCFT 的原始 LLM recommender，是最关键 baseline。
+- **LLM backbone 对照**：LLaMA-7B 与 Vicuna-7B，检查约束是否依赖某个 backbone。
+- **Few-shot vs full-shot**：分别检验数据稀缺时的鲁棒性和充足数据下的上限。
+- **Ablation w/o LCFT**：在相同架构、数据和训练配置下移除 logit KL 项，隔离真正增益。
 
-- **结论段落线索**：(RQ3) and hyperparameter analyses (RQ4), with detailed analysis provided in Appendices C and D, In this work, we introduced LCFT, a novel fine- respectively. tuning framework designed to mitigate hallucina- tion in LLM-based recommender systems. LCFT mitigates hallucination by taking semantically op- 5.3 Case Studies of LCFT posite instruction pairs as input and incorporates a KL divergence term into the training objective to We present case studies from the MovieLens-100K enlarge their distributional differences in the logit dataset (a movie watching scenario) in Table 3. space. Extensive experiments conducted on two These examples demonstrate that traditional fine- LLM-based recommender systems built on differ- tuning methods can yield logically inconsistent or ent LLM backbones and across four real-world contradictory outputs. For example, in the case datasets demonstrate that LCFT effectively reduces of user1, a baseline model simultaneously infers hallucinations and improves recom
-- **局限/未来工作线索**：pairs and incorporates Kullback鈥揕eibler (KL) mechanisms to transcend the limitations of tradi-；reasoning, and compositional generalisation. Their limitations in practical applications.；鈥 Extensive experiments on LLM-based recom- To overcome the limitations of directly using LLMs；they still show limitations in modelling complex et al., 2024; Zhu et al., 2024; Hong et al., 2025;
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+## 4. Experiments / Findings：结果如何读
 
-## 7. 一句话定位
+### 4.1 Few-shot
 
-这篇论文把“Logit Space Constrained Fine-Tuning for Mitigating Hallucinations in LLM-Based Recommender Systems”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+表 1 在 movie/book 数据上比较 16、64、256 shots。LCFT-TALLRec 的 AUC 例如 movie 约为 0.7013、0.7157、0.7436，book 约为 0.6021、0.6195、0.6531；在各 shot 设置下都超过相应普通 fine-tuning 和传统推荐 baseline。关键不是绝对 AUC，而是数据很少时，对比约束仍能提升稳定性。
+
+传统推荐模型在 few-shot 下学习不足，LLM-based recommender 的语义表征更强；但没有 hallucination constraint 的 TALLRec/CoLLM 仍会出现偏好冲突。
+
+### 4.2 Full-shot 与跨系统
+
+表 2 在 ML-1M 和 Amazon-Book full-shot 设置中显示 LCFT-CoLMF 达到约 0.7451/0.7019 和 0.8221/0.6323 的 AUC/NDCG 组合，并在两类数据上优于对照。LCFT 在 LLaMA-7B、Vicuna-7B 及 TALLRec、CoLLM 上都保持收益，说明它更像训练目标层面的约束，而不是某个模型的偶然技巧。
+
+### 4.3 Case study
+
+MovieLens 案例中，普通 fine-tuning 对同一用户既判断喜欢 “The Good, The Bad and The Ugly” 又判断不喜欢；LCFT 输出一致地把该电影判为不喜欢。这个案例直观展示了 KL 对比项如何把正负 instruction 的决策分开，减少逻辑矛盾。
+
+### 4.4 Ablation 与超参数
+
+附录表 4 直接比较 w/o LCFT 与 LCFT-TALLRec：在 movie 16/64/256 shots，AUC 从约 0.6701/0.6713/0.7142 提升到 0.7013/0.7157/0.7436；book 也有一致提升。超参数分析显示 KL 权重过小约束不足，过大则可能损害原始推荐目标，因此需要在偏好区分和任务拟合之间平衡。
+
+## 5. Ablation / 机制解释
+
+论文的主要机制证据是固定 backbone、数据、推荐头和训练流程，只加/去 logit KL 项；再用正负 instruction 的定性案例观察输出是否从矛盾变为一致。它支持的解释是：hallucination 在此处部分表现为 logit space 中相反语义没有被拉开，而不是仅仅是生成文本不流畅。
+
+## 6. Limitations / 局限与复现注意
+
+- 论文把 hallucination 操作化为推荐偏好矛盾，未覆盖事实核验、开放式文本幻觉等更广泛定义。
+- 最大化相反 instruction 的 KL 可能导致过度自信或不稳定输出，论文也提醒部署时要谨慎解释 confidence。
+- 正负 instruction 的质量直接决定训练信号，模板偏差可能被 LCFT 学到。
+- 数据集和 backbone 数量有限，尚未证明在更长历史、冷启动用户或真实在线反馈中同样有效。
+
+## 7. 两句话总结
+
+论文要解决 LLM 推荐系统在历史偏好不足时产生矛盾推荐和幻觉的问题。LCFT 构造语义相反的 instruction pair，并用 KL 项拉开它们的 logit distributions，在 TALLRec/CoLLM、few-shot/full-shot 和多个数据集上都优于普通 fine-tuning，但约束强度和 hallucination 定义仍限制了泛化。

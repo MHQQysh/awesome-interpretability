@@ -1,60 +1,75 @@
 # 083. Analyzing Gender Representation in Multilingual Models
 
-> 逐篇阅读记录：第 83 篇 / 200。以下内容基于论文 PDF 文本、正式元数据和该论文的摘要；方法、baseline 和 finding 的具体数值应以原文表格为最终依据。
+> 人工精读笔记：以 mBERT 的英语、法语、西班牙语表示为对象，重点区分“性别可预测”与“性别可移除”这两个并不等价的问题。
 
 ## 0. 论文信息
 
 - **作者**：Hila Gonen, Shauli Ravfogel, Yoav Goldberg
-- **发表 venue / date**：ACL / 2022/01
-- **正式页面**：[Paper](https://aclanthology.org/2022.repl4nlp-1.8)
-- **领域标签**：Representation, Rationale, Hidden, LLM, Behavior, Explain
-- **本地 PDF 文本规模**：约 7,298 个词
+- **来源**：[RepL4NLP 2022](https://aclanthology.org/2022.repl4nlp-1.8)
+- **模型/数据**：mBERT；BiosBias 与 Multilingual BiosBias（英语、法语、西班牙语）
+- **工具**：线性 probe、Iterative Nullspace Projection（INLP）、PCA、方向余弦相似度
 
-## 1. Abstract 讲解
+## 1. Introduction：要解决什么问题
 
-- **研究问题**：模型可能记忆敏感信息或表现出偏置，研究需要识别风险来源并评估干预是否会损伤效用。
-- **摘要主线**：解决自然语言解释或归因结果是否忠实反映模型决策机制的问题。。方法上以Representation为主线，结合论文摘要中的核心设定：Multilingual language models were shown to allow for nontrivial transfer across scripts and languages.
-- **阅读解释**：摘要通常完成“现象/缺口 -> 方法 -> 实验对象 -> 结论”的压缩叙述。阅读这篇论文时，应把摘要中的 claim 拆成可验证的实验问题，而不要把摘要里的提升直接当成跨模型结论。
+多语言模型能把不同语言映射到共享表示空间，但“共享”到底意味着什么并不清楚。论文以性别这一可解释概念为案例，研究三件事：一个语言训练的 gender classifier 能否跨语言迁移？在一个语言中用 INLP 去除性别后，去除效果能否跨语言迁移？不同语言的 gender subspace 是否由相同方向组成？
 
-## 2. Introduction 讲解
+这个问题同时关联可解释性与 debiasing：如果探针跨语言效果很好，人们可能推断性别信息完全共享；但如果用一个语言的投影不能在另一个语言中去除 gender，说明“可预测”与“可消除”需要看表示空间中全部方向，而不能只看一个 probe 分数。
 
-- **引言结构**：1 Introduction fiers and examining their ability to transfer across；2 Related Work focuses on the way gender is represented in multi-；5 Analyzing the Cross-linguality of more easily analyze the extent to which gender is；2020. Finding universal grammatical relations in；2020. On the language neutrality of pre-trained mul-；2020. Can multilingual language models transfer ric Cistac, Tim Rault, Remi Louf, Morgan Funtow-；2019. Examining gender bias in languages with
-- **引言关键线索**：Pretrained models of contextualized representa- languages. We then proceed to identifying 鈥済en- tions (Peters et al., 2018; Devlin et al., 2019; Liu der subspaces鈥 鈥 subspaces that encode gender et al., 2020) are known in their ability to capture 鈥 in each language, with the goal of understand- both explicit and implicit information during train- ing which information is language-specific, and ing. A special case of these models are multilin- which is shared across languages. Following recent gual models (Devlin et al., 2019; Conneau et al., work on linear interventions (Ravfogel et al., 2020; 2020), which are pretrained with texts in multiple Elazar et al., 2021; Ravfogel et al., 2021, 2022), we languages. These models were shown to induce take an 鈥渁mnesic鈥 approach: we study the extent to the emergence of similar representations in differ- which neutralizing the gender subspace in one 
-- **缺口与贡献的读法**：重点区分作者提出的新测量、新模型、新数据集、新干预，还是把已有解释工具应用到新任务；这决定论文属于方法创新、评测创新还是应用研究。
+## 2. Method / Framework：怎么解决
 
-## 3. Method / Framework 讲解
+### 2.1 跨语言线性 probe
 
-- **方法段落线索**：the emergence of similar representations in differ- which neutralizing the gender subspace in one lan- ent languages, a phenomenon that was put to use guage interferes with gender prediction in another for transfer between languages in end-tasks (Pires language. Finally, we analyze the similarity in the et al., 2019; Muller et al., 2020; Gonen et al., 2020). gender-encoding components across languages. However, the underlying mechanism is still not We find that while linear probes for gender trans- clear, and we do not know yet the full extent to fer well between languages 鈥 that is, a gender which the representations of these models share classifier that is trained on one language predicts information across languages. gender well in another language, the method we The rise of pretrained models has been accom- employ for neutralizing gender fails to transfer panied with growing concern regarding sensitive across languages. A deeper ana
-- **方法与解释性关系**：该论文主要围绕 `Representation, Rationale, Hidden, LLM, Behavior, Explain` 展开；应追踪输入、内部状态/解释单元、干预或评分函数、最终输出之间的数据流。
-- **关键检查点**：解释单元是 token、layer、attention head、MLP、neuron、SAE feature、rationale、source document 还是外部知识；不同单元不能直接横向比较。
+从 mBERT 最终层上下文表示训练 logistic regression gender classifier。训练语言和测试语言分离，考察 English->French、English->Spanish 以及反方向的 zero-shot transfer。高跨语言准确率意味着至少存在共享、线性可访问的 gender direction。
 
-## 4. Baseline 与对比讲解
+### 2.2 INLP 去除
 
-- **检测到的 baseline / comparison 关键词**：For comparison
-- **对比维度**：通常需要同时看任务性能、解释质量/faithfulness、计算成本、扰动后的稳定性和副作用；只看主任务分数会掩盖解释方法的代价。
-- **正文对比证据索引**：
-  - question: are gender directions fully shared across der matrix (for comparison).
-  - sentations, for all three language pairs. 0.597 and 0.453, respectively. For comparison,
+INLP 迭代训练线性分类器，收集其权重方向并投影到 nullspace，使表示不能再被线性预测为 gender。作者分别在英语、法语、西班牙语训练 INLP，再把所得 neutralization projection 应用于其他语言；同时监测 profession classification，区分去除性别与破坏全部信息。
 
-## 5. Experiments 与 Findings 讲解
+### 2.3 更细的子空间分析
 
-- **可检测的数值信号**：未检测到稳定的百分比/倍数表达；请直接查看实验表格。
-- **结果解读顺序**：先确认数据集、模型、prompt、评价器和预算是否与 baseline 完全一致，再判断提升来自方法本身还是协议差异。
-- **正文 finding 证据索引**：
-  - However, the underlying mechanism is still not We find that while linear probes for gender trans-
-  - existence of several similar directions explains the contextual word alignment and show improvement
-  - follows: (a) we show that gender-identification is sition of the representations to language-encoding
-  - (b) we find that neutralizing gender identifica- strate that implicit word-level translations can be
-  - that are language-specific (Section 5.1); (d) we find tions, as a case study for the analysis of a concrete
-  - English portion is significantly larger. Following guages, with only a slight degradation in perfor-
-  - of gender in that language; (ii) project the already- indeed, we find that gender directions are shared
+作者把 gender 表示视为一组按预测能力排序的方向，用 PCA/解释方差观察一个语言的 gender rowspace 与另一个语言的 gender-neutral nullspace 的重叠；再比较 INLP 前 100 个 classifier 方向的两两 cosine similarity。这样可以解释为什么前几个方向共享而后续方向语言特定。
 
-## 6. Conclusion、局限与可复现性
+## 3. Baseline / 对比基线
 
-- **结论段落线索**：Finally, we also look at the performance of each Towards better understanding of the underlying classifier (trained during INLP) across languages. mechanism of multilingual modeling, in this work In Figure 3, we depict the gender prediction accu- we focus on the way gender is represented across 74 languages. We analyze and quantify the extent to novation programme, grant agreement No. 802774 which gender information is shared in multilingual (iEXTRACT). representations in English, French and Spanish. We find that on the one hand, gender prediction transfers very well across languages: training a References linear classifier on English data yields a high qual- Srijan Bansal, Vishal Garimella, Ayush Suhane, and ity classifier for French and Spanish as well (true Animesh Mukherjee. 2021. Debiasing multilingual word embeddings: A case study of three indian lan- for all three languages in both directions). On the guages. In Proceedings of the 32nd ACM Conference other hand, our attempt to t
-- **局限/未来工作线索**：We hope to account for this in future work. Methods in Natural Language Processing (EMNLP),
-- **可复现核对表**：模型与版本、数据集切分、prompt、随机种子、baseline 实现、评价脚本、解释单元位置、干预强度、显存/时间成本。
+- **Majority baseline**：INLP 后的 gender accuracy 是否降到多数类水平。
+- **In-language INLP**：在训练 INLP 的同一语言上去除，是可达到的 debiasing 参照。
+- **Cross-language INLP**：把另一语言训练的投影迁移过去，检验跨语言可移除性。
+- **Random projection**：与相同维度的随机方向比较，排除解释方差下降只是维度减少造成。
+- **Profession classifier**：gender 与职业在 BiosBias 中相关，职业准确率用于观察投影是否造成不必要的信息损伤。
 
-## 7. 一句话定位
+## 4. Experiments / Findings：结果如何读
 
-这篇论文把“Analyzing Gender Representation in Multilingual Models”放在从行为现象/内部表征分析走向可验证解释、可控干预或可信应用的研究链条上；真正的贡献需要通过其 baseline、ablation 和跨设置 finding 共同判断。
+### 4.1 Gender probe transfer 很强
+
+表 2 显示 gender classifier 跨语言迁移效果很高。例如 English classifier 在 French/Spanish 数据上的准确率约为 98.10%/97.29%，反方向也保持高水平。这个结果说明 mBERT 中存在跨语言共享的、线性可访问的 gender 信息。
+
+但它只回答“能不能预测”，没有回答“所有 gender 方向是否相同”。这是论文后续反直觉结果的关键。
+
+### 4.2 Gender removal transfer 很弱
+
+表 3 中，在各语言内训练的 INLP 可以把 gender accuracy 从很高水平压到接近 majority；例如英语由约 99.3 降到约 53.7，profession accuracy 只从约 79.9 降到 78.1，说明 in-language 去除相对选择性。
+
+把英语训练的 INLP 应用于法语/西班牙语时，gender 仍保持较高可预测性；法语/西班牙语训练的投影在英语上也不能完全消除 gender。表 4 显示 profession classification 的跨语言变化通常较小，说明失败并非单纯因为投影摧毁了整个表示。
+
+### 4.3 性别子空间是 partial sharing
+
+解释方差实验中，把 English gender rowspace 再投影到 French/Spanish neutral space 会丢掉一部分、但不是全部信息；随机投影控制排除了纯维度效应。方向相似度更细地显示，English/French 前三个 INLP classifier 的 cosine similarity 约为 0.777、0.597、0.453，而所有前 100 个方向的平均绝对相似度仅约 0.037。
+
+因此最显著的前 2--3 个 gender directions 跨语言共享，足以让线性 probe transfer；较弱的后续方向语言特定，仍足以在移除共享方向后恢复 gender。论文把这一结构称为 partial sharing。
+
+## 5. Ablation / 机制解释
+
+random projection 是主要 sanity check；在相同维度下，跨语言 neutralization 比随机投影额外丢失信息，支持“确实存在共享 gender directions”的解释。EnGender + EnNeutral 等自投影应把 gender explained variance 归零，实验符合这一预期；而 EnGender + FrNeutral 不归零，证明跨语言 neutralization 不是完全对齐。
+
+这也解释了“分类可迁移、去除不可迁移”的表面矛盾：预测只需一个强共享方向；去除则必须覆盖整个 gender 子空间，任何语言特定残余方向都可能被新的线性 probe 利用。
+
+## 6. Limitations / 局限与复现注意
+
+- 研究只覆盖 mBERT 和三种语言，不能直接推广到所有多语言模型、语言家族或 gender marking 体系。
+- INLP 针对线性可解码信息；非线性 probe 仍可能恢复被称为“neutral”的信息。
+- BiosBias 的职业与性别存在数据相关性，profession accuracy 不是完整的公平性评估。
+- 论文测量的是表示空间中的可预测/可移除性，不直接证明模型在生成或真实决策中会使用同一方向。
+
+## 7. 两句话总结
+
+论文发现 mBERT 中的性别信息在英语、法语和西班牙语之间具有很强的线性可迁移性，但用一个语言训练的 INLP 却不能在另一个语言中完整去除它。细粒度方向分析解释了这一现象：最显著的 gender directions 共享，剩余较弱方向语言特定，因此“识别”只需部分共享而“中和”需要整体共享。
